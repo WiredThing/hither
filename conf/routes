@@ -1,0 +1,20 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /                           controllers.Application.index
+
+GET     /v1/_ping                   controllers.StatusController.ping
+
+GET     /v1/repositories/:repository/tags                           controllers.Tags.tagsWithoutNamespace(repository:String)
+GET     /v1/repositories/:repository/tags/:tagName                  controllers.Tags.tagNameWithoutNamespace(repository:String, tagName:String)
+GET     /v1/repositories/:namespace/:repository/tags                controllers.Tags.tags(namespace:String, repository:String)
+GET     /v1/repositories/:namespace/:repository/tags/:tagName       controllers.Tags.tagName(namespace:String, repository:String, tagName:String)
+
+GET     /v1/images/:imageId/ancestry    controllers.Images.ancestry(imageId:String)
+GET     /v1/images/:imageId/json        controllers.Images.json(imageId:String)
+GET     /v1/images/:imageId/layer       controllers.Images.layer(imageId:String)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public", file)
