@@ -2,6 +2,7 @@ package services
 
 import org.scalatest.{Matchers, FlatSpec}
 import services._
+import models.{RepositoryName, Repository, Namespace}
 
 class RepositoryTest extends FlatSpec with Matchers {
 

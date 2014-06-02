@@ -1,6 +1,6 @@
 import play.PlayImport.PlayKeys._
 
-name := """registry"""
+name := "docker-registry"
 
 version := "1.0-SNAPSHOT"
 

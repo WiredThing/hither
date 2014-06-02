@@ -1,5 +1,5 @@
+import models.{RepositoryName, Namespace}
 import play.api.mvc.PathBindable
-import services.{RepositoryName, Namespace}
 
 package object binders {
 

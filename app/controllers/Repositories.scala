@@ -7,10 +7,9 @@ import play.api.libs.json.{Json, JsError}
 import services._
 import scala.concurrent.Future
 import play.api.mvc.Result
-import services.RepositoryName
 import play.api.libs.json.JsSuccess
-import services.Namespace
-import services.ImageResult
+import services.IndexService.ImageResult
+import models.{Repository, RepositoryName, Namespace}
 
 
 object Repositories extends Controller {
