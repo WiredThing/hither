@@ -4,22 +4,28 @@ import play.api.mvc.{Action, Controller}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
+import play.api.Logger
 
 
 object Images extends Controller {
   def ancestry(imageId: String) = Action.async { implicit request =>
-    WS.url(s"http://registry-1.docker.io/v1/images/$imageId/ancestry").get.map {
+    Logger.info(s"ancestry for $imageId")
+    WS.url(s"http://registry-1.docker.io/v1/images/$imageId/ancestry").get().map {
       response => Ok(response.json)
     }
   }
 
   def json(imageId: String) = Action.async { implicit request =>
-    WS.url(s"http://registry-1.docker.io/v1/images/$imageId/json").get.map {
+    Logger.info(s"json for $imageId")
+    WS.url(s"http://registry-1.docker.io/v1/images/$imageId/json").get().map {
       response => Ok(response.json)
     }
   }
 
+
+
   def layer(imageId: String) = Action.async { implicit request =>
+    Logger.info(s"layer for $imageId")
     val url = s"http://registry-1.docker.io/v1/images/$imageId/layer"
 
     // Make the request
