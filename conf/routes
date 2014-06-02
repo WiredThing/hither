@@ -14,8 +14,8 @@ GET     /v1/repositories/:namespace/:repository/tags                controllers.
 GET     /v1/repositories/:namespace/:repository/tags/:tagName       controllers.Tags.tagName(namespace:String, repository:String, tagName:String)
 #PUT     /v1/repositories/:namespace/:repository/tags/:tagName       controllers.Tags.putTagName(namespace:String, repository:String, tagName:String)
 
-GET     /v1/repositories/:repository/images                         controllers.Repositories.imagesNoNamespace(repository:String)
-GET     /v1/repositories/:namespace/:repository/images              controllers.Repositories.images(namespace:String, repository:String)
+GET     /v1/repositories/:repository/images                         controllers.Repositories.imagesNoNamespace(repository:RepositoryName)
+GET     /v1/repositories/:namespace/:repository/images              controllers.Repositories.images(namespace:Namespace, repository:RepositoryName)
 
 GET     /v1/images/:imageId/ancestry    controllers.Images.ancestry(imageId:String)
 GET     /v1/images/:imageId/json        controllers.Images.json(imageId:String)

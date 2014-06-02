@@ -1,30 +1,32 @@
 package controllers
 
-import play.api.mvc.{Result, Action, Controller}
-import play.api.Play.current
+import play.api.mvc.{Action, Controller}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.{WSRequestHolder, WS}
+import play.api.libs.json.{Json, JsError}
+
+import services._
 import scala.concurrent.Future
+import play.api.mvc.Result
+import services.RepositoryName
+import play.api.libs.json.JsSuccess
+import services.Namespace
+import services.ImageResult
+
 
 object Repositories extends Controller {
 
-  def imagesNoNamespace(repository: String) = Action.async { implicit request =>
-    getImages(s"http://index.docker.io/v1/repositories/$repository/images")
+  def imagesNoNamespace(repository: RepositoryName) = Action.async { implicit request =>
+    getImages(Repository(None, repository))
   }
 
-  def images(namespace:String, repository: String) = Action.async { implicit request =>
-    getImages(s"http://index.docker.io/v1/repositories/$namespace/$repository/images")
+  def images(namespace: Namespace, repository: RepositoryName) = Action.async { implicit request =>
+    getImages(Repository(Some(namespace), repository))
   }
 
-  private def getImages(url: String): Future[Result] = {
-    val request: WSRequestHolder = WS.url(url).withHeaders(("X-Docker-Token", "true"))
-
-    request.get().map {
-      response =>
-        val headersToCopy = List("x-docker-endpoints", "x-docker-token", "date", "Connection")
-        val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
-
-        Ok(response.json).withHeaders(responseHeaders: _*)
+  private def getImages(repository: Repository): Future[Result] = {
+    IndexService.getImages(repository).map {
+      case ImageResult(JsError(errs), _) => BadGateway(errs.toString())
+      case ImageResult(JsSuccess(images, _), headers) => Ok(Json.toJson(images)).withHeaders(headers: _*)
     }
   }
 }
