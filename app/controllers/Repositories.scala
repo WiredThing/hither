@@ -8,7 +8,6 @@ import scala.concurrent.Future
 
 object Repositories extends Controller {
 
-
   def imagesNoNamespace(repository: String) = Action.async { implicit request =>
     getImages(s"http://index.docker.io/v1/repositories/$repository/images")
   }
