@@ -10,6 +10,7 @@ import play.api.mvc.Result
 import play.api.libs.json.JsSuccess
 import services.IndexService.ImageResult
 import models.{Repository, RepositoryName, Namespace}
+import play.api.Logger
 
 
 object Repositories extends Controller {
@@ -20,6 +21,11 @@ object Repositories extends Controller {
 
   def images(namespace: Namespace, repository: RepositoryName) = Action.async { implicit request =>
     getImages(Repository(Some(namespace), repository))
+  }
+
+  def imageList(repository:RepositoryName) = Action { request =>
+    Logger.info(s"image list for ${repository.name}")
+    Ok
   }
 
   private def getImages(repository: Repository): Future[Result] = {

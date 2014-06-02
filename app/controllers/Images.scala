@@ -6,7 +6,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
 import models.ImageId
 import services.{ServiceResult, RegistryService}
-import play.api.libs.json.{Json, JsError, JsSuccess}
+import play.api.libs.json.{JsString, Json, JsError, JsSuccess}
+import java.io.File
+import play.api.Logger
 
 
 object Images extends Controller {
@@ -24,8 +26,18 @@ object Images extends Controller {
     }
   }
 
-  def layer(imageId: String) = Action.async { implicit request =>
-    val url = s"http://registry-1.docker.io/v1/images/$imageId/layer"
+  def putJson(imageId:ImageId) = Action(parse.file(new File(s"/tmp/${imageId.id}.json"))) { request =>
+    Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
+  }
+
+  def putLayer(imageId: ImageId) = Action(parse.file(new File(s"/tmp/${imageId.id}"))) { request =>
+    Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
+  }
+
+  def layer(imageId: ImageId) = Action.async { implicit request =>
+    val url = s"http://registry-1.docker.io/v1/images/${imageId.id}/layer"
 
     // Make the request
     WS.url(url).getStream().map {
