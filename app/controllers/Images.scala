@@ -4,18 +4,23 @@ import play.api.mvc.{Action, Controller}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
+import models.ImageId
+import services.{ServiceResult, RegistryService}
+import play.api.libs.json.{Json, JsError, JsSuccess}
 
 
 object Images extends Controller {
-  def ancestry(imageId: String) = Action.async { implicit request =>
-    WS.url(s"http://registry-1.docker.io/v1/images/$imageId/ancestry").get().map {
-      response => Ok(response.json)
+  def ancestry(imageId: ImageId) = Action.async { implicit request =>
+    RegistryService.ancestry(imageId).map {
+      case ServiceResult(JsError(errs), _) => BadGateway(errs.toString())
+      case ServiceResult(JsSuccess(images, _), headers) => Ok(Json.toJson(images.map(_.id))).withHeaders(headers: _*)
     }
   }
 
-  def json(imageId: String) = Action.async { implicit request =>
-    WS.url(s"http://registry-1.docker.io/v1/images/$imageId/json").get().map {
-      response => Ok(response.json)
+  def json(imageId: ImageId) = Action.async { implicit request =>
+    RegistryService.json(imageId).map {
+      case ServiceResult(JsError(errs), _) => BadGateway(errs.toString())
+      case ServiceResult(JsSuccess(layerDescriptor, _), headers) => Ok(layerDescriptor.layerJson).withHeaders(headers: _*)
     }
   }
 

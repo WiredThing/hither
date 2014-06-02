@@ -1,4 +1,4 @@
-import models.{RepositoryName, Namespace}
+import models.{ImageId, RepositoryName, Namespace}
 import play.api.mvc.PathBindable
 
 package object binders {
@@ -37,6 +37,18 @@ package object binders {
         )
 
     def unbind(key: String, value: RepositoryName): String = value.name
+  }
+
+  implicit def imageIdBinder = new PathBindable[ImageId] {
+    override def bind(key: String, value: String): Either[String, ImageId] =
+      implicitly[PathBindable[String]].
+        bind(key, value).
+        fold(
+          left => Left(left),
+          right => Right(ImageId(right))
+        )
+
+    def unbind(key: String, value: ImageId): String = value.id
   }
 
 }
