@@ -8,7 +8,8 @@ import play.api.libs.iteratee.Iteratee
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
-import system.Configuration
+import system.{Registry, Configuration}
+import system.Registry.{CacheFile, LocalSource}
 
 case class CacheImage(imageId: ImageId)
 
@@ -17,41 +18,41 @@ class LayerActor extends Actor {
     case CacheImage(imageId) => {
 
       {
-        val imageFile = Configuration.buildCachePath(imageId.id).get
+        val imageSource = Registry.buildCachePath(imageId.id)
         val imageUrl = s"http://registry-1.docker.io/v1/images/${imageId.id}/layer"
 
-        if (imageFile.exists()) {
-          Logger.info(s"Image is already cached in ${imageFile.getAbsolutePath}")
+        if (imageSource.exists()) {
+          Logger.info(s"Image is already cached in ${imageSource.getAbsolutePath}")
         } else {
-          Logger.info(s"Caching image  into ${imageFile.getAbsolutePath()}")
-          retrieveAndCache(imageUrl, imageFile)
+          Logger.info(s"Caching image  into ${imageSource.getAbsolutePath()}")
+          retrieveAndCache(imageUrl, imageSource)
         }
       }
 
       {
-        val jsonFile = Configuration.buildCachePath(s"${imageId.id}.json").get
+        val jsonSource = Registry.buildCachePath(s"${imageId.id}.json")
         val jsonUrl = s"http://registry-1.docker.io/v1/images/${imageId.id}/json"
-        if (jsonFile.exists()) {
-          Logger.info(s"Json is already cached in ${jsonFile.getAbsolutePath}")
+        if (jsonSource.exists()) {
+          Logger.info(s"Json is already cached in ${jsonSource.getAbsolutePath}")
         } else {
-          Logger.info(s"Caching json into ${jsonFile.getAbsolutePath()}")
-          retrieveAndCache(jsonUrl, jsonFile)
+          Logger.info(s"Caching json into ${jsonSource.getAbsolutePath()}")
+          retrieveAndCache(jsonUrl, jsonSource)
         }
       }
     }
   }
 
 
-  def retrieveAndCache(url: String, file: File) = {
+  def retrieveAndCache(url: String, source: CacheFile) = {
     WS.url(url).getStream().map {
       case (response, body) =>
         if (response.status == 200) {
-          body run Iteratee.fold[Array[Byte], FileOutputStream](new FileOutputStream(file)) { (os, data) =>
+          body run Iteratee.fold[Array[Byte], FileOutputStream](new FileOutputStream(source.file)) { (os, data) =>
             os.write(data)
             os
           }.map { os =>
             os.close()
-            Right(file)
+            Right(source.file)
           }
         }
     }

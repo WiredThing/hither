@@ -1,15 +1,18 @@
 package services
 
 import scala.concurrent.Future
+import scala.io.Source
+
+import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{Json, JsResult}
 import play.api.libs.ws.WS
 
 import models._
-import system.Configuration
-import scala.io.Source
-import play.api.Logger
+import system.{Registry, Configuration}
+import java.io.File
+import system.Registry.LocalSource
 
 trait ServiceResult[T]
 
@@ -40,28 +43,11 @@ object RegistryService {
   }
 
   def json(imageId: ImageId): Future[ServiceResult[LayerDescriptor]] = {
-    val imageJsonFile = Configuration.buildRegistryPath(s"${imageId.id}.json").get
-    if (imageJsonFile.exists) {
-      Logger.info(s"Serving json from local file ${imageJsonFile.getAbsolutePath}")
-      Future {
-        val source = Source.fromFile(imageJsonFile)
-        val json = Json.parse(source.mkString)
-        source.close()
-        val v = json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, json))
-        JsonResult(v, List())
-      }
-    } else {
-      val cachedJsonFile = Configuration.buildCachePath(s"${imageId.id}.json").get
-      if (cachedJsonFile.exists) {
-        Logger.info(s"Serving json from cached file ${cachedJsonFile.getAbsolutePath}")
-        Future {
-          val source = Source.fromFile(cachedJsonFile)
-          val json = Json.parse(source.mkString)
-          source.close()
-          val v = json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, json))
-          JsonResult(v, List())
-        }
-      } else {
+    Registry.findLocalSource(imageId, Some("json")) match {
+      case Some(localSource) => Logger.info(s"Serving json from local file ${localSource.getAbsolutePath}")
+        processJsonFile(localSource)
+
+      case None =>
         WS.url(s"http://registry-1.docker.io/v1/images/${imageId.id}/json").get().map { response =>
           val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
 
@@ -70,13 +56,21 @@ object RegistryService {
               val v = response.json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, response.json))
               JsonResult(v, responseHeaders)
 
-
             case 404 => NotFoundResult()
 
             case code => ErrorResult(code)
           }
         }
-      }
+    }
+  }
+
+
+
+  def processJsonFile(source:LocalSource): Future[JsonResult[LayerDescriptor]] = {
+    Future {
+      val json = Json.parse(source.asString())
+      val v = json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, json))
+      JsonResult(v, List())
     }
   }
 }
