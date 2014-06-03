@@ -3,7 +3,7 @@ package actors
 import akka.actor.Actor
 import models.ImageId
 import play.api.libs.ws.WS
-import java.io.FileOutputStream
+import java.io.{File, FileOutputStream}
 import play.api.libs.iteratee.Iteratee
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
@@ -15,39 +15,45 @@ case class CacheImage(imageId: ImageId)
 class LayerActor extends Actor {
   override def receive = {
     case CacheImage(imageId) => {
-      val url = s"http://registry-1.docker.io/v1/images/${imageId.id}/layer"
 
-      val layerFile = Configuration.buildCachePath(imageId.id).get
+      {
+        val imageFile = Configuration.buildCachePath(imageId.id).get
+        val imageUrl = s"http://registry-1.docker.io/v1/images/${imageId.id}/layer"
 
-      if (layerFile.exists()) {
-        Logger.info(s"Image ${imageId.id} is already cached in ${layerFile.getAbsolutePath}")
-      } else {
+        if (imageFile.exists()) {
+          Logger.info(s"Image is already cached in ${imageFile.getAbsolutePath}")
+        } else {
+          Logger.info(s"Caching image  into ${imageFile.getAbsolutePath()}")
+          retrieveAndCache(imageUrl, imageFile)
+        }
+      }
 
-        Logger.info(s"Caching image ${imageId.id} into ${layerFile.getAbsolutePath()}")
-
-        // Make the request
-        WS.url(url).getStream().map {
-          case (response, body) =>
-            // Check that the response was successful
-            if (response.status == 200) {
-
-              // Get the content type
-              val contentType = response.headers.get("Content-Type").flatMap(_.headOption)
-                .getOrElse("application/octet-stream")
-
-              //Ok.feed(body).as(contentType).withHeaders("Content-Length" -> length)
-              body run Iteratee.fold[Array[Byte], FileOutputStream](new FileOutputStream(layerFile)) { (os, data) =>
-                os.write(data)
-                os
-              }.map { os =>
-                os.close()
-                Right(layerFile)
-              }
-            }
+      {
+        val jsonFile = Configuration.buildCachePath(s"${imageId.id}.json").get
+        val jsonUrl = s"http://registry-1.docker.io/v1/images/${imageId.id}/json"
+        if (jsonFile.exists()) {
+          Logger.info(s"Json is already cached in ${jsonFile.getAbsolutePath}")
+        } else {
+          Logger.info(s"Caching json into ${jsonFile.getAbsolutePath()}")
+          retrieveAndCache(jsonUrl, jsonFile)
         }
       }
     }
   }
 
 
+  def retrieveAndCache(url: String, file: File) = {
+    WS.url(url).getStream().map {
+      case (response, body) =>
+        if (response.status == 200) {
+          body run Iteratee.fold[Array[Byte], FileOutputStream](new FileOutputStream(file)) { (os, data) =>
+            os.write(data)
+            os
+          }.map { os =>
+            os.close()
+            Right(file)
+          }
+        }
+    }
+  }
 }

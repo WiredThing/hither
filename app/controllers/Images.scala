@@ -5,66 +5,70 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
 import models.ImageId
-import services.{ServiceResult, RegistryService}
-import play.api.libs.json.{JsString, Json, JsError, JsSuccess}
+import services._
+import play.api.libs.json.{Json, JsError}
 import play.api.Logger
-import java.io.File
-import scala.util.Try
 import system.{Configuration, AppSystem}
-import actors.CacheImage
 import scala.concurrent.Future
+import services.NotFoundResult
+import play.api.libs.json.JsSuccess
+import services.JsonResult
+import actors.CacheImage
+import play.api.libs.json.JsString
+import scala.Some
 
 
 object Images extends Controller {
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
     RegistryService.ancestry(imageId).map {
-      case ServiceResult(JsError(errs), _) => BadGateway(errs.toString())
-      case ServiceResult(JsSuccess(images, _), headers) => {
+      case JsonResult(JsError(errs), _) => BadGateway(errs.toString())
+      case JsonResult(JsSuccess(images, _), headers) => {
         images.foreach { imageId =>
           AppSystem.layerActor ! CacheImage(imageId)
         }
         Ok(Json.toJson(images.map(_.id))).withHeaders(headers: _*)
       }
+      case NotFoundResult() => NotFound
+      case ErrorResult(code) => Status(code)
     }
   }
 
   def json(imageId: ImageId) = Action.async { implicit request =>
     RegistryService.json(imageId).map {
-      case ServiceResult(JsError(errs), _) => BadGateway(errs.toString())
-      case ServiceResult(JsSuccess(layerDescriptor, _), headers) => Ok(layerDescriptor.layerJson).withHeaders(headers: _*)
+      case JsonResult(JsError(errs), _) => BadGateway(errs.toString())
+      case JsonResult(JsSuccess(layerDescriptor, _), headers) => Ok(layerDescriptor.layerJson).withHeaders(headers: _*)
+      case NotFoundResult() => NotFound
+      case ErrorResult(code) => Status(code)
     }
   }
 
-  def putJson(imageId: ImageId) = Action(parse.file(buildRegistryPath(s"${imageId.id}.json").get)) { request =>
+  def putJson(imageId: ImageId) = Action(parse.file(Configuration.buildRegistryPath(s"${imageId.id}.json").get)) { request =>
     Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
     Ok(JsString(""))
   }
 
-  def putLayer(imageId: ImageId) = Action(parse.file(buildRegistryPath(imageId.id).get)) { request =>
+  def putLayer(imageId: ImageId) = Action(parse.file(Configuration.buildRegistryPath(imageId.id).get)) { request =>
     Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
     Ok(JsString(""))
   }
 
-  def buildRegistryPath(name: String): Try[File] = Try {
-    val registryRoot = new File(system.Configuration.registryRoot)
-    registryRoot.mkdirs
 
-    new File(registryRoot, name)
-  }
-
-
-  def putChecksum(imageId: ImageId) = Action(parse.file(buildRegistryPath(s"${imageId.id}.checksum").get)) { request =>
+  def putChecksum(imageId: ImageId) = Action(parse.file(Configuration.buildRegistryPath(s"${imageId.id}.checksum").get)) { request =>
     Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
     Ok(JsString(""))
   }
 
   def layer(imageId: ImageId) = Action.async { implicit request =>
 
-    val imageFile = Configuration.buildCachePath(imageId.id).get
+    val imageFile = Configuration.buildRegistryPath(imageId.id).get
+    val cacheFile = Configuration.buildCachePath(imageId.id).get
 
     if (imageFile.exists) {
-      Logger.info(s"Supplying image ${imageId.id} from cache")
+      Logger.info(s"Supplying image ${imageId.id} from local registry")
       Future(Ok.sendFile(imageFile).withHeaders(("Content-Type", "binary/octet-stream"), ("Content-Length", imageFile.length().toString)))
+    } else if (cacheFile.exists) {
+      Logger.info(s"Supplying image ${imageId.id} from cache")
+      Future(Ok.sendFile(cacheFile).withHeaders(("Content-Type", "binary/octet-stream"), ("Content-Length", cacheFile.length().toString)))
     } else {
       val url = s"http://registry-1.docker.io/v1/images/${imageId.id}/layer"
 

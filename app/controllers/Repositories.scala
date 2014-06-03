@@ -35,6 +35,9 @@ object Repositories extends Controller {
 
   def allocateRepoWithoutNamespace(repositoryName: RepositoryName) = Action(parse.json) { request =>
     val repo = Repository(None, repositoryName)
+
+    IndexService.allocateRepo(repo)
+
     Ok.withHeaders(
       ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
       ("X-Docker-Endpoints", request.headers("Host"))

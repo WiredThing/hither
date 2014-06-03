@@ -3,12 +3,21 @@ package services
 import scala.concurrent.Future
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.JsResult
+import play.api.libs.json.{Json, JsResult}
 import play.api.libs.ws.WS
 
 import models._
+import system.Configuration
+import scala.io.Source
+import play.api.Logger
 
-case class ServiceResult[T](images: JsResult[T], headers: List[(String, String)])
+trait ServiceResult[T]
+
+case class NotFoundResult[T]() extends ServiceResult[T]
+
+case class ErrorResult[T](code: Int) extends ServiceResult[T]
+
+case class JsonResult[T](images: JsResult[T], headers: List[(String, String)]) extends ServiceResult[T]
 
 object RegistryService {
   val headersToCopy = List("x-docker-token", "date", "Connection")
@@ -16,17 +25,58 @@ object RegistryService {
   def ancestry(imageId: ImageId): Future[ServiceResult[List[ImageId]]] = {
     WS.url(s"http://registry-1.docker.io/v1/images/${imageId.id}/ancestry").get().map { response =>
       val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
-      val imageIds = response.json.validate[List[String]].map { ids => ids.map(ImageId(_))}
-      ServiceResult(imageIds, responseHeaders)
+
+      response.status match {
+        case ok if ok >= 200 && ok <= 299 =>
+          val imageIds = response.json.validate[List[String]].map { ids => ids.map(ImageId(_))}
+          JsonResult(imageIds, responseHeaders)
+
+        case 404 => NotFoundResult()
+
+        case code => ErrorResult(code)
+      }
+
     }
   }
 
   def json(imageId: ImageId): Future[ServiceResult[LayerDescriptor]] = {
-    WS.url(s"http://registry-1.docker.io/v1/images/${imageId.id}/json").get().map { response =>
-      val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
+    val imageJsonFile = Configuration.buildRegistryPath(s"${imageId.id}.json").get
+    if (imageJsonFile.exists) {
+      Logger.info(s"Serving json from local file ${imageJsonFile.getAbsolutePath}")
+      Future {
+        val source = Source.fromFile(imageJsonFile)
+        val json = Json.parse(source.mkString)
+        source.close()
+        val v = json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, json))
+        JsonResult(v, List())
+      }
+    } else {
+      val cachedJsonFile = Configuration.buildCachePath(s"${imageId.id}.json").get
+      if (cachedJsonFile.exists) {
+        Logger.info(s"Serving json from cached file ${cachedJsonFile.getAbsolutePath}")
+        Future {
+          val source = Source.fromFile(cachedJsonFile)
+          val json = Json.parse(source.mkString)
+          source.close()
+          val v = json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, json))
+          JsonResult(v, List())
+        }
+      } else {
+        WS.url(s"http://registry-1.docker.io/v1/images/${imageId.id}/json").get().map { response =>
+          val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
 
-      val v = response.json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, response.json))
-      ServiceResult(v, responseHeaders)
+          response.status match {
+            case ok if ok >= 200 && ok <= 299 =>
+              val v = response.json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, response.json))
+              JsonResult(v, responseHeaders)
+
+
+            case 404 => NotFoundResult()
+
+            case code => ErrorResult(code)
+          }
+        }
+      }
     }
   }
 }

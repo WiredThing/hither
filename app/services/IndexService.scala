@@ -6,9 +6,11 @@ import play.api.libs.json.JsResult
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import models.{Image, Repository}
+import system.Configuration
 
 
 object IndexService {
+
   case class ImageResult(images: JsResult[List[Image]], headers: List[(String, String)])
 
   def getImages(repo: Repository): Future[ImageResult] = {
@@ -22,5 +24,9 @@ object IndexService {
 
         ImageResult(response.json.validate[List[Image]], responseHeaders)
     }
+  }
+
+  def allocateRepo(repo: Repository): Unit = {
+    Configuration.buildRepoIndexPath(repo)
   }
 }
