@@ -11,7 +11,7 @@ import models._
 case class ServiceResult[T](images: JsResult[T], headers: List[(String, String)])
 
 object RegistryService {
-  val headersToCopy = List("x-docker-endpoints", "x-docker-token", "date", "Connection")
+  val headersToCopy = List("x-docker-token", "date", "Connection")
 
   def ancestry(imageId: ImageId): Future[ServiceResult[List[ImageId]]] = {
     WS.url(s"http://registry-1.docker.io/v1/images/${imageId.id}/ancestry").get().map { response =>

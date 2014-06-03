@@ -17,7 +17,7 @@ object IndexService {
 
     request.get().map {
       response =>
-        val headersToCopy = List("x-docker-endpoints", "x-docker-token", "date", "Connection")
+        val headersToCopy = List("x-docker-token", "date", "Connection")
         val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
 
         ImageResult(response.json.validate[List[Image]], responseHeaders)

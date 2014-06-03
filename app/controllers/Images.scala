@@ -10,13 +10,21 @@ import play.api.libs.json.{JsString, Json, JsError, JsSuccess}
 import play.api.Logger
 import java.io.File
 import scala.util.Try
+import system.{Configuration, AppSystem}
+import actors.CacheImage
+import scala.concurrent.Future
 
 
 object Images extends Controller {
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
     RegistryService.ancestry(imageId).map {
       case ServiceResult(JsError(errs), _) => BadGateway(errs.toString())
-      case ServiceResult(JsSuccess(images, _), headers) => Ok(Json.toJson(images.map(_.id))).withHeaders(headers: _*)
+      case ServiceResult(JsSuccess(images, _), headers) => {
+        images.foreach { imageId =>
+          AppSystem.layerActor ! CacheImage(imageId)
+        }
+        Ok(Json.toJson(images.map(_.id))).withHeaders(headers: _*)
+      }
     }
   }
 
@@ -51,29 +59,38 @@ object Images extends Controller {
   }
 
   def layer(imageId: ImageId) = Action.async { implicit request =>
-    val url = s"http://registry-1.docker.io/v1/images/${imageId.id}/layer"
 
-    // Make the request
-    WS.url(url).getStream().map {
-      case (response, body) =>
+    val imageFile = Configuration.buildCachePath(imageId.id).get
 
-        // Check that the response was successful
-        if (response.status == 200) {
+    if (imageFile.exists) {
+      Logger.info(s"Supplying image ${imageId.id} from cache")
+      Future(Ok.sendFile(imageFile).withHeaders(("Content-Type", "binary/octet-stream"), ("Content-Length", imageFile.length().toString)))
+    } else {
+      val url = s"http://registry-1.docker.io/v1/images/${imageId.id}/layer"
 
-          // Get the content type
-          val contentType = response.headers.get("Content-Type").flatMap(_.headOption)
-            .getOrElse("application/octet-stream")
+      AppSystem.layerActor ! CacheImage(imageId)
 
-          // If there's a content length, send that, otherwise return the body chunked
-          response.headers.get("Content-Length") match {
-            case Some(Seq(length)) =>
-              Ok.feed(body).as(contentType).withHeaders("Content-Length" -> length)
-            case _ =>
-              Ok.chunked(body).as(contentType)
+      // Make the request
+      WS.url(url).getStream().map {
+        case (response, body) =>
+
+          // Check that the response was successful
+          if (response.status == 200) {
+            // Get the content type
+            val contentType = response.headers.get("Content-Type").flatMap(_.headOption)
+              .getOrElse("application/octet-stream")
+
+            // If there's a content length, send that, otherwise return the body chunked
+            response.headers.get("Content-Length") match {
+              case Some(Seq(length)) =>
+                Ok.feed(body).as(contentType).withHeaders("Content-Length" -> length)
+              case _ =>
+                Ok.chunked(body).as(contentType)
+            }
+          } else {
+            BadGateway
           }
-        } else {
-          BadGateway
-        }
+      }
     }
   }
 }
