@@ -8,7 +8,7 @@ object LayerId {
   implicit val formats = Json.format[LayerId]
 }
 
-case class LayerLink(id: String, parent: String)
+case class LayerLink(id: String, parent: Option[String])
 
 object LayerLink {
   implicit val formats = Json.format[LayerLink]

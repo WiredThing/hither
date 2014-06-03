@@ -4,6 +4,8 @@ import play.api.mvc.{Action, Controller}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
+import models.{Namespace, RepositoryName}
+import play.api.libs.json.JsString
 
 object Tags extends Controller {
   def tagsWithoutNamespace(repository: String) = Action.async { implicit request =>
@@ -30,4 +32,14 @@ object Tags extends Controller {
     }
   }
 
+  def putTagNameWithoutNamespace( repository:RepositoryName, tagName:String) = Action {
+    Ok(JsString(""))
+  }
+
+  def putTagName(namespace:Namespace, repository:RepositoryName, tagName:String) = Action {
+    Ok(JsString(""))
+  }
+
 }
+
+

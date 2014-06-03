@@ -23,9 +23,31 @@ object Repositories extends Controller {
     getImages(Repository(Some(namespace), repository))
   }
 
-  def imageList(repository:RepositoryName) = Action { request =>
-    Logger.info(s"image list for ${repository.name}")
-    Ok
+  def putImagesNoNamespace(repository: RepositoryName) = Action(parse.json) { implicit request =>
+    Logger.info("TODO - putImagesNoNamespace")
+    NoContent
+  }
+
+  def putImages(namespace: Namespace, repository: RepositoryName) = Action(parse.json) { implicit request =>
+    Logger.info("TODO - putImages")
+    NoContent
+  }
+
+  def allocateRepoWithoutNamespace(repositoryName: RepositoryName) = Action(parse.json) { request =>
+    val repo = Repository(None, repositoryName)
+    Ok.withHeaders(
+      ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
+      ("X-Docker-Endpoints", request.headers("Host"))
+    )
+  }
+
+  def allocateRepo(namespace: Namespace, repositoryName: RepositoryName) = Action(parse.json) { request =>
+    val repo = Repository(Some(namespace), repositoryName)
+
+    Ok.withHeaders(
+      ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
+      ("X-Docker-Endpoints", request.headers("Host"))
+    )
   }
 
   private def getImages(repository: Repository): Future[Result] = {

@@ -12,7 +12,7 @@ object IndexService {
   case class ImageResult(images: JsResult[List[Image]], headers: List[(String, String)])
 
   def getImages(repo: Repository): Future[ImageResult] = {
-    val url = s"http://index.docker.io/v1/repositories/${repo.urlString}/images"
+    val url = s"http://index.docker.io/v1/repositories/${repo.qualifiedName}/images"
     val request: WSRequestHolder = WS.url(url).withHeaders(("X-Docker-Token", "true"))
 
     request.get().map {

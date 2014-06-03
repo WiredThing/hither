@@ -7,8 +7,9 @@ import play.api.libs.ws.WS
 import models.ImageId
 import services.{ServiceResult, RegistryService}
 import play.api.libs.json.{JsString, Json, JsError, JsSuccess}
-import java.io.File
 import play.api.Logger
+import java.io.File
+import scala.util.Try
 
 
 object Images extends Controller {
@@ -26,13 +27,26 @@ object Images extends Controller {
     }
   }
 
-  def putJson(imageId:ImageId) = Action(parse.file(new File(s"/tmp/${imageId.id}.json"))) { request =>
+  def putJson(imageId: ImageId) = Action(parse.file(buildRegistryPath(s"${imageId.id}.json").get)) { request =>
     Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
     Ok(JsString(""))
   }
 
-  def putLayer(imageId: ImageId) = Action(parse.file(new File(s"/tmp/${imageId.id}"))) { request =>
+  def putLayer(imageId: ImageId) = Action(parse.file(buildRegistryPath(imageId.id).get)) { request =>
     Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
+  }
+
+  def buildRegistryPath(name: String): Try[File] = Try {
+    val registryRoot = new File(system.Configuration.registryRoot)
+    registryRoot.mkdirs
+
+    new File(registryRoot, name)
+  }
+
+
+  def putChecksum(imageId: ImageId) = Action(parse.file(buildRegistryPath(s"${imageId.id}.checksum").get)) { request =>
+    Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
     Ok(JsString(""))
   }
 
