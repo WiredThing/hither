@@ -1,12 +1,12 @@
 import play.PlayImport.PlayKeys._
 
-name := "docker-registry"
+name := "hither"
 
-version := "1.0-SNAPSHOT"
+version := "0.1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-routesImport += "binders._, services._, models._"
+routesImport += "binders._,  models._"
 
 scalaVersion := "2.11.1"
 
