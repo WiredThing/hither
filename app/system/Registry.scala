@@ -5,9 +5,8 @@ import models.ImageId
 
 object Registry {
 
-  def findLocalSource(imageId: ImageId, extension: Option[String] = None): Option[LocalSource] = {
-    val name = List(Some(s"${imageId.id}"), extension).flatten.mkString(".")
-    List(Registry.buildRegistryPath(name).existing, Registry.buildCachePath(name).existing).flatten.headOption
+  def findLocalSource(imageId: ImageId, extension: String): Option[LocalSource] = {
+    List(Registry.buildRegistryPath(s"${imageId.id}.$extension").existing, Registry.buildCachePath(s"${imageId.id}.$extension").existing).flatten.headOption
   }
 
   def createDirs: Unit = {

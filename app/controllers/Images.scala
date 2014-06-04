@@ -23,12 +23,12 @@ object Images extends Controller {
 
   def buildAncestry(imageId: ImageId): Future[List[String]] = {
     Logger.info(s"Building ancestry for ${imageId.id}")
-    Registry.findLocalSource(imageId, Some("ancestry")) match {
+    Registry.findLocalSource(imageId, "ancestry") match {
       case Some(localAncestry) => {
         Logger.info(s"Serving ancestry from ${localAncestry.getAbsolutePath()}")
         Future(Json.parse(localAncestry.source.mkString).as[List[String]])
       }
-      case None => Registry.findLocalSource(imageId, Some("json")) match {
+      case None => Registry.findLocalSource(imageId, "json") match {
         case Some(r: RegistryFile) => Json.parse(r.source.mkString) \ "parent" match {
           case JsString(id) => buildAncestry(ImageId(id)).map(imageId.id +: _)
           case _ => Future(List())
@@ -54,7 +54,7 @@ object Images extends Controller {
   }
 
   def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
-    val result = Registry.findLocalSource(imageId, Some(extension)) match {
+    val result = Registry.findLocalSource(imageId, extension) match {
       case Some(localSource) =>
         Logger.info(s"Supplying $extension for ${imageId.id} from ${localSource.kind}")
         Future((Enumerator.fromFile(localSource.file), contentType, Some(localSource.length().toString)))
