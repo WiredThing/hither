@@ -11,35 +11,13 @@ object Registry {
     List(Registry.buildRegistryPath(name).existing, Registry.buildCachePath(name).existing).flatten.headOption
   }
 
-  trait LocalSource {
-    def file: File
-
-    def source: String
-
-    def mkdirs() = {file.mkdirs(); this}
-
-    def exists() = file.exists()
-
-    def getAbsolutePath() = file.getAbsolutePath()
-
-    def length() = file.length()
-
-    def asString() : String = {
-      val s = Source.fromFile(file)
-      val string = s.mkString
-      s.close()
-      string
-    }
-
-    def existing:Option[LocalSource] = if (exists()) Some(this) else None
-  }
 
   case class RegistryFile(file: File) extends LocalSource {
-    val source = "registry"
+    val kind = "registry"
   }
 
   case class CacheFile(file: File) extends LocalSource {
-    val source = "cache"
+    val kind = "cache"
   }
 
   def buildRegistryPath(name: String): RegistryFile = {

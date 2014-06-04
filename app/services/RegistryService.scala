@@ -1,7 +1,6 @@
 package services
 
 import scala.concurrent.Future
-import scala.io.Source
 
 import play.api.Logger
 import play.api.Play.current
@@ -10,9 +9,8 @@ import play.api.libs.json.{Json, JsResult}
 import play.api.libs.ws.WS
 
 import models._
-import system.{Registry, Configuration}
-import java.io.File
-import system.Registry.LocalSource
+import system.Registry
+import system.LocalSource
 
 trait ServiceResult[T]
 

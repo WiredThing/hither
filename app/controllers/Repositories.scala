@@ -11,6 +11,7 @@ import play.api.libs.json.JsSuccess
 import services.IndexService.ImageResult
 import models.{Repository, RepositoryName, Namespace}
 import play.api.Logger
+import system.Index
 
 
 object Repositories extends Controller {
@@ -23,14 +24,24 @@ object Repositories extends Controller {
     getImages(Repository(Some(namespace), repository))
   }
 
-  def putImagesNoNamespace(repository: RepositoryName) = Action(parse.json) { implicit request =>
-    Logger.info("TODO - putImagesNoNamespace")
-    NoContent
+  def putImagesNoNamespace(repository: RepositoryName) = {
+    val repo = Repository(None, repository)
+    Index.createRepoDir(repo)
+
+    Action(parse.file(Index.buildImagesPath(repo).file)) { implicit request =>
+      Logger.info("putImagesNoNamespace")
+      NoContent
+    }
   }
 
-  def putImages(namespace: Namespace, repository: RepositoryName) = Action(parse.json) { implicit request =>
-    Logger.info("TODO - putImages")
-    NoContent
+  def putImages(namespace: Namespace, repository: RepositoryName) = {
+    val repo = Repository(Some(namespace), repository)
+    Index.createRepoDir(repo)
+
+    Action(parse.file(Index.buildImagesPath(repo).file)) { implicit request =>
+      Logger.info("putImagesNoNamespace")
+      NoContent
+    }
   }
 
   def allocateRepoWithoutNamespace(repositoryName: RepositoryName) = Action(parse.json) { request =>
@@ -54,9 +65,15 @@ object Repositories extends Controller {
   }
 
   private def getImages(repository: Repository): Future[Result] = {
-    IndexService.getImages(repository).map {
-      case ImageResult(JsError(errs), _) => BadGateway(errs.toString())
-      case ImageResult(JsSuccess(images, _), headers) => Ok(Json.toJson(images)).withHeaders(headers: _*)
+    val indexFile = Index.buildImagesPath(repository)
+
+    if (indexFile.exists()) {
+      Future(Ok.sendFile(indexFile.file))
+    } else {
+      IndexService.getImages(repository).map {
+        case ImageResult(JsError(errs), _) => BadGateway(errs.toString())
+        case ImageResult(JsSuccess(images, _), headers) => Ok(Json.toJson(images)).withHeaders(headers: _*)
+      }
     }
   }
 }

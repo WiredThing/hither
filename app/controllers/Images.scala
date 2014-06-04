@@ -8,63 +8,110 @@ import models.ImageId
 import play.api.Logger
 import system.Registry
 import scala.concurrent.Future
-import play.api.libs.json.JsString
+import play.api.libs.json.{Json, JsString}
 import scala.Some
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.{Iteratee, Enumerator}
 import java.io.FileOutputStream
+import system.Registry.RegistryFile
 
+object NotFoundException extends Exception
 
 object Images extends Controller {
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
-    Registry.findLocalSource(imageId, Some("ancestry")) match {
-      case Some(localSource) =>
-        Logger.info(s"Supplying ancestry from ${localSource.source}")
-        Future(Ok.sendFile(localSource.file).withHeaders(("Content-Type", "application/json"), ("Content-Length", localSource.length().toString)))
+    buildAncestry(imageId).map { l => Ok(Json.toJson(l))}
+  }
 
-      case None =>
-        respondFromUrl(s"${imageId.id}.ancestry", s"http://registry-1.docker.io/v1/images/${imageId.id}/ancestry")
+  def buildAncestry(imageId: ImageId): Future[List[String]] = {
+    Logger.info(s"Building ancestry for ${imageId.id}")
+    Registry.findLocalSource(imageId, Some("ancestry")) match {
+      case Some(localAncestry) => {
+        Logger.info(s"Serving ancestry from ${localAncestry.getAbsolutePath()}")
+        Future(Json.parse(localAncestry.source.mkString).as[List[String]])
+      }
+      case None => Registry.findLocalSource(imageId, Some("json")) match {
+        case Some(r: RegistryFile) => Json.parse(r.source.mkString) \ "parent" match {
+          case JsString(id) => buildAncestry(ImageId(id)).map(imageId.id +: _)
+          case _ => Future(List())
+        }
+        case _ => findData(imageId, "ancestry").flatMap { t =>
+          val (e, _, _) = t
+
+          e.run(Iteratee.getChunks).map { byteArrays =>
+            val s = byteArrays.map(new String(_)).mkString
+            Json.parse(s).as[List[String]]
+          }
+        }
+      }
     }
   }
 
   def json(imageId: ImageId) = Action.async { implicit request =>
-    Registry.findLocalSource(imageId, Some("json")) match {
+    findData(imageId, "json").map(feedResult)
+  }
+
+  def findData(imageId: ImageId, extension: String): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
+    val result = Registry.findLocalSource(imageId, Some(extension)) match {
       case Some(localSource) =>
-        Logger.info(s"Supplying json from ${localSource.source}")
-        Future(Ok.sendFile(localSource.file).withHeaders(("Content-Type", "application/json"), ("Content-Length", localSource.length().toString)))
+        Logger.info(s"Supplying $extension from ${localSource.kind}")
+        Future((Enumerator.fromFile(localSource.file), "application/json", Some(localSource.length().toString)))
 
       case None =>
-        respondFromUrl(s"${imageId.id}.json", s"http://registry-1.docker.io/v1/images/${imageId.id}/json")
+        Logger.info(s"Going to docker for ${imageId.id}/$extension")
+        respondFromUrl(imageId.id, s"http://registry-1.docker.io/v1/images/${imageId.id}/$extension")
+    }
+    result
+  }
+
+  def feedResult(result: (Enumerator[Array[Byte]], String, Option[String])): Result = {
+    result match {
+      case (e, contentType, Some(length)) => Ok.feed(e).as(contentType).withHeaders("Content-Length" -> length)
+      case (e, contentType, None) => Ok.chunked(e).as(contentType)
     }
   }
 
-  def putJson(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.json").file)) { request =>
-    Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
-    Ok(JsString(""))
+  def putJson(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.json").file)) {
+    request =>
+      Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
+      Ok(JsString(""))
   }
 
-  def putLayer(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(imageId.id).file)) { request =>
-    Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
-    Ok(JsString(""))
+  def putLayer(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(imageId.id).file)) {
+    request =>
+      Logger.info(s"Layer pushed to ${
+        request.body.getAbsolutePath
+      }")
+      Ok(JsString(""))
   }
 
 
-  def putChecksum(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.checksum").file)) { request =>
-    Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
-    Ok(JsString(""))
+  def putChecksum(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${
+    imageId.id
+  }.checksum").file)) {
+    request =>
+      Logger.info(s"Checksum pushed to ${
+        request.body.getAbsolutePath
+      }")
+      Ok(JsString(""))
   }
 
-  def layer(imageId: ImageId) = Action.async { implicit request =>
-    Registry.findLocalSource(imageId) match {
-      case Some(localSource) =>
-        Logger.info(s"Supplying image from ${localSource.source}")
-        Future(Ok.sendFile(localSource.file).withHeaders(("Content-Type", "binary/octet-stream"), ("Content-Length", localSource.length().toString)))
+  def layer(imageId: ImageId) = Action.async {
+    implicit request =>
+      Registry.findLocalSource(imageId) match {
+        case Some(localSource) =>
+          Logger.info(s"Supplying image from ${
+            localSource.kind
+          }")
+          Future(Ok.sendFile(localSource.file).withHeaders(("Content-Type", "binary/octet-stream"), ("Content-Length", localSource.length().toString)))
 
-      case None =>
-        respondFromUrl(imageId.id, s"http://registry-1.docker.io/v1/images/${imageId.id}/layer")
-    }
+        case None =>
+          respondFromUrl(imageId.id, s"http://registry-1.docker.io/v1/images/${imageId.id}/layer") map {
+            case (e, contentType, Some(length)) => Ok.feed(e).as(contentType).withHeaders("Content-Length" -> length)
+            case (e, contentType, None) => Ok.chunked(e).as(contentType)
+          }
+      }
   }
 
-  def respondFromUrl(cacheFileName:String, url: String): Future[Result] = {
+  def respondFromUrl(cacheFileName: String, url: String): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
     WS.url(url).getStream().map {
       case (response, body) =>
 
@@ -77,22 +124,23 @@ object Images extends Controller {
           val cacheFile = Registry.buildCachePath(cacheFileName)
           val os = new FileOutputStream(cacheFile.file)
 
-          val fileWriter :Enumerator[Array[Byte]] = body.map { bytes =>
-            os.write(bytes)
-            bytes
+          val fileWriter: Enumerator[Array[Byte]] = body.map {
+            bytes =>
+              os.write(bytes)
+              bytes
           }
 
           fileWriter.onDoneEnumerating(os.close())
 
           // If there's a content length, send that, otherwise return the body chunked
           response.headers.get("Content-Length") match {
-            case Some(Seq(length)) =>
-              Ok.feed(fileWriter).as(contentType).withHeaders("Content-Length" -> length)
-            case _ =>
-              Ok.chunked(fileWriter).as(contentType)
+            case Some(Seq(length)) => (fileWriter, contentType, Some(length))
+
+            case _ => (fileWriter, contentType, None)
+
           }
         } else {
-          BadGateway
+          throw NotFoundException
         }
     }
   }

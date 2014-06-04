@@ -17,10 +17,7 @@ object Configuration {
   def buildRepoIndexPath(repo: Repository): File =  {
     val indexRoot = new File(system.Configuration.indexRoot)
 
-    val path = repo match {
-      case Repository(None, RepositoryName(repoName)) => new File(new File(indexRoot, "_none_"), repoName)
-      case Repository(Some(Namespace(namespace)), RepositoryName(repoName)) => new File(new File(indexRoot, namespace), repoName)
-    }
+    val path =  new File(new File(indexRoot, repo.namespace.name), repo.repoName.name)
 
     path.mkdirs()
 
