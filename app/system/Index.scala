@@ -5,6 +5,12 @@ import java.io.File
 
 object Index {
 
+  def createDirs() : Unit = {
+    root.mkdirs()
+  }
+
+  def root = new File(system.Configuration.indexRoot)
+
   case class ImagesSource(file: File) extends LocalSource {
     val kind = "images"
   }
@@ -29,7 +35,7 @@ object Index {
 
   def buildRepoDir(repo: Repository): File = {
     val name =  s"${repo.namespace.name}/${repo.repoName.name}"
-    new File(new File(system.Configuration.indexRoot), name)
+    new File(root, name)
   }
 
 }
