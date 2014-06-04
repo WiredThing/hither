@@ -1,7 +1,6 @@
 package system
 
 import java.io.File
-import scala.io.Source
 import models.ImageId
 
 object Registry {
@@ -11,6 +10,15 @@ object Registry {
     List(Registry.buildRegistryPath(name).existing, Registry.buildCachePath(name).existing).flatten.headOption
   }
 
+  def createDirs: Unit = {
+    registryRoot.mkdirs()
+    cacheRoot.mkdirs()
+  }
+
+
+  def cacheRoot: File = new File(system.Configuration.cacheRoot)
+
+  def registryRoot: File = new File(system.Configuration.registryRoot)
 
   case class RegistryFile(file: File) extends LocalSource {
     val kind = "registry"
@@ -20,11 +28,7 @@ object Registry {
     val kind = "cache"
   }
 
-  def buildRegistryPath(name: String): RegistryFile = {
-    RegistryFile(new File(new File(system.Configuration.registryRoot), name))
-  }
+  def buildRegistryPath(name: String): RegistryFile = RegistryFile(new File(registryRoot, name))
 
-  def buildCachePath(name: String): CacheFile = {
-    CacheFile(new File(new File(system.Configuration.cacheRoot), name))
-  }
+  def buildCachePath(name: String): CacheFile = CacheFile(new File(cacheRoot, name))
 }
