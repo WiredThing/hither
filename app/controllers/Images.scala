@@ -21,7 +21,9 @@ object NotFoundException extends Exception
 object Images extends Controller {
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
     Logger.info(s"get ancestry for ${imageId.id}")
-    buildAncestry(imageId).map { l => Ok(Json.toJson(l))}
+    buildAncestry(imageId).map { l => Ok(Json.toJson(l))}.recover {
+      case NotFoundException => NotFound
+    }
   }
 
   def buildAncestry(imageId: ImageId): Future[List[String]] = {
@@ -49,14 +51,18 @@ object Images extends Controller {
   }
 
   def json(imageId: ImageId) = Action.async { implicit request =>
-    findData(imageId, "json").map(feedResult)
+    findData(imageId, "json").map(feedResult).recover {
+      case NotFoundException => NotFound
+    }
   }
 
   def layer(imageId: ImageId) = Action.async { implicit request =>
-    findData(imageId, "layer", "binary/octet-stream").map(feedResult)
+    findData(imageId, "layer", "binary/octet-stream").map(feedResult).recover {
+      case NotFoundException => NotFound
+    }
   }
 
-  def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
+  private def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
     val result = Registry.findLocalSource(imageId, extension) match {
       case Some(localSource) =>
         Logger.info(s"Supplying $extension for ${imageId.id} from ${localSource.kind}")
@@ -89,9 +95,7 @@ object Images extends Controller {
       Ok(JsString(""))
   }
 
-  def putChecksum(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${
-    imageId.id
-  }.checksum").file)) {
+  def putChecksum(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.checksum").file)) {
     request =>
       Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
       Ok(JsString(""))
