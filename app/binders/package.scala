@@ -3,7 +3,7 @@ import play.api.mvc.PathBindable
 
 package object binders {
 
-  implicit def OptionBindable[T : PathBindable] = new PathBindable[Option[T]] {
+  implicit def OptionBindable[T: PathBindable] = new PathBindable[Option[T]] {
     def bind(key: String, value: String): Either[String, Option[T]] =
       implicitly[PathBindable[T]].
         bind(key, value).
@@ -41,14 +41,14 @@ package object binders {
 
   implicit def imageIdBinder = new PathBindable[ImageId] {
     override def bind(key: String, value: String): Either[String, ImageId] =
-      implicitly[PathBindable[String]].
-        bind(key, value).
-        fold(
-          left => Left(left),
-          right => Right(ImageId(right))
-        )
+      implicitly[PathBindable[String]].bind(key, value).fold(
+        left => Left(left),
+        right => Right(ImageId(trimQuotes(right)))
+      )
 
     def unbind(key: String, value: ImageId): String = value.id
   }
+
+  def trimQuotes(s: String): String = if (s.startsWith("\"") && s.endsWith("\"")) s.substring(1, s.length - 1) else s
 
 }
