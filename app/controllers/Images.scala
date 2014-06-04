@@ -56,7 +56,7 @@ object Images extends Controller {
   def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
     val result = Registry.findLocalSource(imageId, Some(extension)) match {
       case Some(localSource) =>
-        Logger.info(s"Supplying $extension from ${localSource.kind}")
+        Logger.info(s"Supplying $extension for ${imageId.id} from ${localSource.kind}")
         Future((Enumerator.fromFile(localSource.file), contentType, Some(localSource.length().toString)))
 
       case None =>
