@@ -43,12 +43,10 @@ package object binders {
     override def bind(key: String, value: String): Either[String, ImageId] =
       implicitly[PathBindable[String]].bind(key, value).fold(
         left => Left(left),
-        right => Right(ImageId(trimQuotes(right)))
+        right => Right(ImageId(right))
       )
 
     def unbind(key: String, value: ImageId): String = value.id
   }
-
-  def trimQuotes(s: String): String = if (s.startsWith("\"") && s.endsWith("\"")) s.substring(1, s.length - 1) else s
 
 }

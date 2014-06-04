@@ -42,8 +42,10 @@ object Tags extends Controller {
       override def accept(f: File): Boolean = f.isFile
     }
 
+    def trimQuotes(s: String): String = if (s.startsWith("\"") && s.endsWith("\"")) s.substring(1, s.length - 1) else s
+
     val tags = tagsDir.listFiles(filter).map { tagFile =>
-      (tagFile.getName(), Source.fromFile(tagFile).mkString)
+      (tagFile.getName(), trimQuotes(Source.fromFile(tagFile).mkString))
     }
 
     Future(Ok(Json.toJson(Map(tags: _*))))

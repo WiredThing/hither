@@ -35,7 +35,7 @@ object Images extends Controller {
       }
       case None => Registry.findLocalSource(imageId, "json") match {
         case Some(r: RegistryFile) => Json.parse(r.source.mkString) \ "parent" match {
-          case JsString(parentId) => Logger.info(s"Parent is $parentId"); buildAncestry(ImageId(trimQuotes(parentId))).map(imageId.id +: _)
+          case JsString(parentId) => Logger.info(s"Parent is $parentId"); buildAncestry(ImageId(parentId)).map(imageId.id +: _)
           case _ => Future(List())
         }
         case _ => findData(imageId, "ancestry").flatMap { t =>
@@ -49,8 +49,6 @@ object Images extends Controller {
       }
     }
   }
-
-  def trimQuotes(s: String): String = if (s.startsWith("\"") && s.endsWith("\"")) s.substring(1, s.length - 1) else s
 
   def json(imageId: ImageId) = Action.async { implicit request =>
     findData(imageId, "json").map(feedResult).recover {
