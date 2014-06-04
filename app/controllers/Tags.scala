@@ -1,13 +1,13 @@
 package controllers
 
-import play.api.mvc.{Result, Action, Controller}
+import play.api.mvc.{Request, Result, Action, Controller}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
 import models.{Repository, Namespace, RepositoryName}
-import play.api.libs.json.{Json, JsString}
+import play.api.libs.json.{JsValue, Json, JsString}
 import system.Index
-import java.io.{File, FileFilter}
+import java.io.{FileOutputStream, File, FileFilter}
 import scala.concurrent.Future
 import scala.io.Source
 import play.api.Logger
@@ -42,10 +42,9 @@ object Tags extends Controller {
       override def accept(f: File): Boolean = f.isFile
     }
 
-    def trimQuotes(s: String): String = if (s.startsWith("\"") && s.endsWith("\"")) s.substring(1, s.length - 1) else s
 
     val tags = tagsDir.listFiles(filter).map { tagFile =>
-      (tagFile.getName(), trimQuotes(Source.fromFile(tagFile).mkString))
+      (tagFile.getName(), Source.fromFile(tagFile).mkString)
     }
 
     Future(Ok(Json.toJson(Map(tags: _*))))
@@ -64,20 +63,31 @@ object Tags extends Controller {
   }
 
   def putTagNameWithoutNamespace(repository: RepositoryName, tagName: String) = {
-    Index.buildTagsDir(Repository(None, repository)).mkdirs()
-
-    Action(parse.file(Index.buildTagPath(Repository(None, repository), tagName).file)) { request =>
-      Ok(JsString(""))
+    Action(parse.json) { request =>
+      writeTagsfile(None, repository, tagName, request)
     }
   }
 
   def putTagName(namespace: Namespace, repository: RepositoryName, tagName: String) = {
-    Index.buildTagsDir(Repository(Some(namespace), repository)).mkdirs()
-    Action(parse.file(Index.buildTagPath(Repository(Some(namespace), repository), tagName).file)) { request =>
-      Ok(JsString(""))
+    Action(parse.json) { request =>
+      writeTagsfile(Some(namespace), repository, tagName, request)
     }
   }
 
+  def writeTagsfile(namespace: Option[Namespace], repository: RepositoryName, tagName: String, request: Request[JsValue]): Result = {
+    request.body match {
+      case JsString(value) =>
+        Logger.info(s"tag value is $value")
+        val tagsDir = Index.buildTagsDir(Repository(namespace, repository))
+        tagsDir.mkdirs()
+        val fos = new FileOutputStream(new File(tagsDir, tagName))
+        fos.write(value.getBytes)
+        fos.close()
+        Ok(JsString(""))
+
+      case _ => BadRequest
+    }
+  }
 }
 
 
