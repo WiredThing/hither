@@ -1,23 +1,26 @@
 package controllers
 
-import play.api.mvc.{Result, Action, Controller}
+import java.io.FileOutputStream
+import scala.concurrent.Future
+
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.WS
-import models.ImageId
+
 import play.api.Logger
-import system.Registry
-import scala.concurrent.Future
+import play.api.mvc.{Result, Action, Controller}
+import play.api.libs.ws.WS
 import play.api.libs.json.{Json, JsString}
-import scala.Some
 import play.api.libs.iteratee.{Iteratee, Enumerator}
-import java.io.FileOutputStream
+
+import system.Registry
 import system.Registry.RegistryFile
+import models.ImageId
 
 object NotFoundException extends Exception
 
 object Images extends Controller {
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
+    Logger.info(s"get ancestry for ${imageId.id}")
     buildAncestry(imageId).map { l => Ok(Json.toJson(l))}
   }
 
@@ -30,7 +33,7 @@ object Images extends Controller {
       }
       case None => Registry.findLocalSource(imageId, "json") match {
         case Some(r: RegistryFile) => Json.parse(r.source.mkString) \ "parent" match {
-          case JsString(id) => buildAncestry(ImageId(id)).map(imageId.id +: _)
+          case JsString(parentId) => Logger.info(s"Parent is $parentId"); buildAncestry(ImageId(parentId)).map(imageId.id +: _)
           case _ => Future(List())
         }
         case _ => findData(imageId, "ancestry").flatMap { t =>
