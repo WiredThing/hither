@@ -61,15 +61,20 @@ object Tags extends Controller {
     }
   }
 
-  def putTagNameWithoutNamespace(repository: RepositoryName, tagName: String) =
+  def putTagNameWithoutNamespace(repository: RepositoryName, tagName: String) = {
+    Index.buildTagsDir(Repository(None, repository)).mkdirs()
+
     Action(parse.file(Index.buildTagPath(Repository(None, repository), tagName).file)) { request =>
       Ok(JsString(""))
     }
+  }
 
-  def putTagName(namespace: Namespace, repository: RepositoryName, tagName: String) =
+  def putTagName(namespace: Namespace, repository: RepositoryName, tagName: String) = {
+    Index.buildTagsDir(Repository(Some(namespace), repository)).mkdirs()
     Action(parse.file(Index.buildTagPath(Repository(Some(namespace), repository), tagName).file)) { request =>
       Ok(JsString(""))
     }
+  }
 
 }
 
