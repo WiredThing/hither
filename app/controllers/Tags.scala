@@ -25,6 +25,18 @@ object Tags extends Controller {
     }
   }
 
+  def tags(namespace: Namespace, repository: RepositoryName) = Action.async { implicit request =>
+    val tagsDir = Index.buildTagsDir(Repository(Some(namespace), repository))
+    Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
+    if (tagsDir.exists()) {
+      feedTagsFromLocal(tagsDir)
+    } else {
+      WS.url(s"http://registry-1.docker.io/v1/repositories/${namespace.name}/${repository.name}/tags").get().map {
+        response => Ok(response.json)
+      }
+    }
+  }
+
   def feedTagsFromLocal(tagsDir: File): Future[Result] = {
     val filter = new FileFilter {
       override def accept(f: File): Boolean = f.isFile
@@ -35,18 +47,6 @@ object Tags extends Controller {
     }
 
     Future(Ok(Json.toJson(Map(tags: _*))))
-  }
-
-  def tags(namespace: Namespace, repository: RepositoryName) = Action.async { implicit request =>
-    val tagsDir = Index.buildTagsDir(Repository(None, repository))
-    Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
-    if (tagsDir.exists()) {
-      feedTagsFromLocal(tagsDir)
-    } else {
-      WS.url(s"http://registry-1.docker.io/v1/repositories/$namespace/$repository/tags").get().map {
-        response => Ok(response.json)
-      }
-    }
   }
 
   def tagNameWithoutNamespace(repository: RepositoryName, tagName: String) = Action.async { implicit request =>
