@@ -50,7 +50,7 @@ object Images extends Controller {
   }
 
   def layer(imageId: ImageId) = Action.async { implicit request =>
-    findData(imageId, "image", "binary/octet-stream").map(feedResult)
+    findData(imageId, "layer", "binary/octet-stream").map(feedResult)
   }
 
   def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
@@ -80,7 +80,7 @@ object Images extends Controller {
   }
 
 
-  def putLayer(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.image").file)) {
+  def putLayer(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.layer").file)) {
     request =>
       Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
       Ok(JsString(""))
