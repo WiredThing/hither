@@ -1,0 +1,4 @@
+#!/bin/bash
+
+./activator dist
+docker build -t wiredthing/hither .
