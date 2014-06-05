@@ -1,4 +1,4 @@
 #!/bin/bash
 
-docker run -p 9000:9000 -v `pwd`/localRegistry:/localRegistry  --rm=true --name hither wiredthing/hither
+docker run -p 80:9000 -v `pwd`/localRegistry:/localRegistry  --rm=true --name hither wiredthing/hither
 
