@@ -7,10 +7,10 @@ WORKDIR /home/play
 
 USER play
 
-ADD target/universal/hither-0.1.0-SNAPSHOT.zip /home/play/hither.zip
+ADD target/universal/hither-0.1.1-SNAPSHOT.zip /home/play/hither.zip
 RUN unzip hither
 RUN rm hither.zip
 
 EXPOSE 9000
 
-CMD ["/bin/bash", "/home/play/hither-0.1.0-SNAPSHOT/bin/hither"]
+CMD ["/bin/bash", "/home/play/hither-0.1.1-SNAPSHOT/bin/hither", "-mem", "512"]
