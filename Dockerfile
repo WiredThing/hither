@@ -10,6 +10,7 @@ USER play
 ADD target/universal/hither-0.1.1-SNAPSHOT.zip /home/play/hither.zip
 RUN unzip hither
 RUN rm hither.zip
+RUN mkdir /home/play/localRegistry
 
 EXPOSE 9000
 
