@@ -2,7 +2,7 @@ import play.PlayImport.PlayKeys._
 
 name := "hither"
 
-version := "0.1.3-SNAPSHOT"
+version := "0.1.3"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
