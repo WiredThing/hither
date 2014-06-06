@@ -2,6 +2,7 @@ package system
 
 import java.io.File
 import models.ImageId
+import play.api.Logger
 
 object Registry {
 
@@ -10,7 +11,9 @@ object Registry {
   }
 
   def createDirs: Unit = {
+    Logger.info(s"Creating $registryRoot")
     registryRoot.mkdirs()
+    Logger.info(s"Creating $cacheRoot")
     cacheRoot.mkdirs()
   }
 

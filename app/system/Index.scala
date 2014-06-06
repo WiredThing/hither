@@ -1,11 +1,13 @@
 package system
 
-import models.{Namespace, RepositoryName, Repository}
+import models.Repository
 import java.io.File
+import play.api.Logger
 
 object Index {
 
   def createDirs() : Unit = {
+    Logger.info(s"Creating $root")
     root.mkdirs()
   }
 

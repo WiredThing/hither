@@ -32,7 +32,7 @@ write_files:
   - path: /opt/hither/env
     permissions: 0755
     content: |
-      registry.index=/opt/hither/localRegistry/index
-      registry.root=/opt/hither/localRegistry/registry
-      registry.cache.root=/opt/hither/localRegistry/cache
+      REGISTRY_INDEX=/opt/hither/localRegistry/index
+      REGISTRY_ROOT=/opt/hither/localRegistry/registry
+      REGISTRY_CACHE=/opt/hither/localRegistry/cache
       pidfile.path=/dev/null
