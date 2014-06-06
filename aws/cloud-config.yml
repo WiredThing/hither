@@ -35,3 +35,4 @@ write_files:
       registry.index=/opt/hither/localRegistry/index
       registry.root=/opt/hither/localRegistry/registry
       registry.cache.root=/opt/hither/localRegistry/cache
+      pidfile.path=/dev/null
