@@ -2,6 +2,8 @@
 
 set -e
 
+set HITHER_VERSION=`cat version`
+
 ./activator dist
 docker build -t wiredthing/hither .
-docker tag wiredthing/hither wiredthing/hither:0.1.4
+docker tag wiredthing/hither wiredthing/hither:$HITHER_VERSION
