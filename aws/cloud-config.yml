@@ -1,4 +1,34 @@
 #cloud-config
 
+hostname: hither
 
-docker run -p 80:9000 -v `pwd`/localRegistry:/home/play/localRegistry  --rm=true --name hither wiredthing/hither
+coreos:
+  update:
+    reboot-strategy: best-effort
+
+  units:
+    - name: hither.service
+      command: start
+      content: |
+        [Unit]
+        Description=Hither container
+        After=docker.service
+
+        [Service]
+        Restart=always
+        ExecStart=/home/core/run-hither
+        ExecStop=/usr/bin/docker stop -t 5 hither
+
+        [Install]
+        WantedBy=local.target
+
+write_files:
+  - path: /home/core/run-hither
+    owner: core:core
+    permissions: 0755
+    content: |
+      #!/bin/bash
+      mkdir -p /home/core/localRegistry
+      chown core:core /home/core/localRegistry
+      chmod a+w /home/core/localRegistry
+      /usr/bin/docker start -a hither || /usr/bin/docker run -p 80:9000 -v /home/core/localRegistry:/home/play/localRegistry --name hither wiredthing/hither
