@@ -16,7 +16,7 @@ coreos:
 
         [Service]
         Restart=always
-        ExecStart=/home/core/run-hither
+        ExecStart=/opt/hither/run-hither
         ExecStop=/usr/bin/docker stop -t 5 hither
 
         [Install]
