@@ -19,10 +19,15 @@ object IndexService {
 
     request.get().map {
       response =>
-        val headersToCopy = List("x-docker-token", "date", "Connection")
-        val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
+        response.status match {
+          case s if s >= 200 && s <= 299 =>
+            val headersToCopy = List("x-docker-token", "date", "Connection")
+            val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
 
-        ImageResult(response.json.validate[List[Image]], responseHeaders)
+            ImageResult(response.json.validate[List[Image]], responseHeaders)
+
+          case 404 => throw NotFoundException(url)
+        }
     }
   }
 

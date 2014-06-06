@@ -2,12 +2,11 @@ package controllers
 
 import play.api.mvc.{Action, Controller}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{Json, JsError}
+import play.api.libs.json.{JsString, Json, JsError, JsSuccess}
 
 import services._
 import scala.concurrent.Future
 import play.api.mvc.Result
-import play.api.libs.json.JsSuccess
 import services.IndexService.ImageResult
 import models.{Repository, RepositoryName, Namespace}
 import play.api.Logger
@@ -17,11 +16,15 @@ import system.Index
 object Repositories extends Controller {
 
   def imagesNoNamespace(repository: RepositoryName) = Action.async { implicit request =>
-    getImages(Repository(None, repository))
+    getImages(Repository(None, repository)).recover {
+      case NotFoundException(message) => NotFound(JsString(message))
+    }
   }
 
   def images(namespace: Namespace, repository: RepositoryName) = Action.async { implicit request =>
-    getImages(Repository(Some(namespace), repository))
+    getImages(Repository(Some(namespace), repository)).recover {
+      case NotFoundException(message) => NotFound(JsString(message))
+    }
   }
 
   def putImagesNoNamespace(repository: RepositoryName) = {

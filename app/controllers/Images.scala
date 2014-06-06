@@ -15,14 +15,14 @@ import play.api.libs.iteratee.{Iteratee, Enumerator}
 import system.Registry
 import system.Registry.RegistryFile
 import models.ImageId
+import services.NotFoundException
 
-object NotFoundException extends Exception
 
 object Images extends Controller {
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
     Logger.info(s"get ancestry for ${imageId.id}")
     buildAncestry(imageId).map { l => Ok(Json.toJson(l))}.recover {
-      case NotFoundException => NotFound
+      case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
@@ -52,13 +52,13 @@ object Images extends Controller {
 
   def json(imageId: ImageId) = Action.async { implicit request =>
     findData(imageId, "json").map(feedResult).recover {
-      case NotFoundException => NotFound
+      case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
   def layer(imageId: ImageId) = Action.async { implicit request =>
     findData(imageId, "layer", "binary/octet-stream").map(feedResult).recover {
-      case NotFoundException => NotFound
+      case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
@@ -130,7 +130,7 @@ object Images extends Controller {
 
           }
         } else {
-          throw NotFoundException
+          throw NotFoundException(url)
         }
     }
   }
