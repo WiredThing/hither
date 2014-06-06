@@ -14,4 +14,4 @@ EXPOSE 9000
 
 WORKDIR /root
 
-CMD ["/bin/bash", "/opt/hither/bin/hither", "-mem", "512"]
+CMD ["/bin/bash", "/opt/hither/bin/hither", "-mem", "384"]
