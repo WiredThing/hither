@@ -5,10 +5,10 @@ VOLUME ["/tmp/work"]
 
 WORKDIR /tmp/work
 
-ADD target/universal/hither-0.1.3.zip /tmp/work/hither.zip
+ADD target/universal/hither-0.1.4.zip /tmp/work/hither.zip
 RUN unzip hither
 RUN rm hither.zip
-RUN mv /tmp/work/hither-0.1.3 /opt/hither
+RUN mv /tmp/work/hither-0.1.4 /opt/hither
 
 VOLUME ["/opt/hither/localRegistry"]
 
