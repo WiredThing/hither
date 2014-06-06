@@ -1,17 +1,14 @@
 FROM dockerfile/java
 MAINTAINER Doug Clinton <doug@wiredthing.com>
 
-RUN useradd -m play
+WORKDIR /opt
 
-WORKDIR /home/play
+ADD target/universal/hither-0.1.1-SNAPSHOT.zip /opt/hither.zip
+RUN unzip hither && rm hither.zip
+RUN mkdir /opt/hither/localRegistry
 
-USER play
-
-ADD target/universal/hither-0.1.1-SNAPSHOT.zip /home/play/hither.zip
-RUN unzip hither
-RUN rm hither.zip
-RUN mkdir /home/play/localRegistry
+VOLUME /opt/hither/localRegistry
 
 EXPOSE 9000
 
-CMD ["/bin/bash", "/home/play/hither-0.1.1-SNAPSHOT/bin/hither", "-mem", "512"]
+CMD ["/bin/bash", "/opt/hither-0.1.1-SNAPSHOT/bin/hither", "-mem", "512"]
