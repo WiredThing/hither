@@ -1,0 +1,4 @@
+#cloud-config
+
+
+docker run -p 80:9000 -v `pwd`/localRegistry:/home/play/localRegistry  --rm=true --name hither wiredthing/hither
