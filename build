@@ -6,7 +6,6 @@ export HITHER_VERSION=`cat version`
 
 echo Building docker image for hither-$HITHER_VERSION
 
-git checkout $HITHER_VERSION || echo Could not checkout tag for $HITHER_VERSION && exit 1
 sed -s s/_VERSION_/$HITHER_VERSION/ < Dockerfile.template > Dockerfile
 
 ./activator dist
