@@ -28,4 +28,4 @@ write_files:
     permissions: 0755
     content: |
       #!/bin/bash
-      /usr/bin/docker start -a hither || /usr/bin/docker run -d -p 80:9000 -v /opt/hither/localRegistry:/opt/hither/localRegistry --name hither wiredthing/hither:latest
+      /usr/bin/docker start -a hither || /usr/bin/docker run -p 80:9000 -v /opt/hither/localRegistry:/opt/hither/localRegistry --name hither wiredthing/hither:latest
