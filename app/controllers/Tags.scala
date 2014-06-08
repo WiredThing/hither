@@ -15,23 +15,13 @@ import system.LocalIndex
 import services.TagService
 
 object Tags extends Controller {
-  def tagsWithoutNamespace(repoName: RepositoryName) = Action.async { implicit request =>
-    val tagsDir = LocalIndex.buildTagsDir(Repository(repoName))
+  def tags(repo: Repository) = Action.async { implicit request =>
+    val tagsDir = LocalIndex.buildTagsDir(repo)
     Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
     if (tagsDir.exists()) {
       feedTagsFromLocal(tagsDir)
     } else {
-      TagService.getTags(repoName).map(Ok(_))
-    }
-  }
-
-  def tags(namespace: Namespace, repoName: RepositoryName) = Action.async { implicit request =>
-    val tagsDir = LocalIndex.buildTagsDir(Repository(namespace, repoName))
-    Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
-    if (tagsDir.exists()) {
-      feedTagsFromLocal(tagsDir)
-    } else {
-      TagService.getTags(namespace, repoName).map(Ok(_))
+      TagService.getTags(repo).map(Ok(_))
     }
   }
 
@@ -47,23 +37,13 @@ object Tags extends Controller {
     Future(Ok(Json.toJson(Map(tags: _*))))
   }
 
-  def tagNameWithoutNamespace(repoName: RepositoryName, tagName: String) = Action.async { implicit request =>
-    TagService.getTag(repoName, tagName).map(Ok(_))
+  def tagName(repo: Repository, tagName: String) = Action.async { implicit request =>
+    TagService.getTag(repo, tagName).map(Ok(_))
   }
 
-  def tagName(namespace: Namespace, repository: RepositoryName, tagName: String) = Action.async { implicit request =>
-    TagService.getTag(namespace, repository, tagName).map(Ok(_))
-  }
-
-  def putTagNameWithoutNamespace(repoName: RepositoryName, tagName: String) = {
+  def putTagName(repo: Repository, tagName: String) = {
     Action(parse.json) { request =>
-      writeTagsfile(Repository(repoName), tagName, request)
-    }
-  }
-
-  def putTagName(namespace: Namespace, repository: RepositoryName, tagName: String) = {
-    Action(parse.json) { request =>
-      writeTagsfile(Repository(namespace, repository), tagName, request)
+      writeTagsfile(repo, tagName, request)
     }
   }
 

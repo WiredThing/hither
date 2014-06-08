@@ -8,22 +8,15 @@ GET     /                           controllers.Application.index
 GET     /v1/_ping                   controllers.StatusController.ping
 
 #DELETE  /v1/repositories/:repository
-GET     /v1/repositories/:repository/tags                           controllers.Tags.tagsWithoutNamespace(repository:RepositoryName)
-GET     /v1/repositories/:repository/tags/:tagName                  controllers.Tags.tagNameWithoutNamespace(repository:RepositoryName, tagName:String)
-GET     /v1/repositories/:namespace/:repository/tags                controllers.Tags.tags(namespace:Namespace, repository:RepositoryName)
-GET     /v1/repositories/:namespace/:repository/tags/:tagName       controllers.Tags.tagName(namespace:Namespace, repository:RepositoryName, tagName:String)
 
-PUT     /v1/repositories/:repository/tags/:tagName                  controllers.Tags.putTagNameWithoutNamespace(repository:RepositoryName, tagName:String)
-PUT     /v1/repositories/:namespace/:repository/tags/:tagName       controllers.Tags.putTagName(namespace:Namespace, repository:RepositoryName, tagName:String)
+GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags                controllers.Tags.tags(repo:Repository)
+GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.Tags.tagName(repo:Repository, tagName:String)
+PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.Tags.putTagName(repo:Repository, tagName:String)
 
-PUT     /v1/repositories/:repository/                               controllers.Repositories.allocateRepoWithoutNamespace(repository:RepositoryName)
-PUT     /v1/repositories/:namespace/:repository/                    controllers.Repositories.allocateRepo(namespace:Namespace, repository:RepositoryName)
+PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/                    controllers.Repositories.allocateRepo(repo:Repository)
 
-GET     /v1/repositories/:repository/images                         controllers.Repositories.imagesNoNamespace(repository:RepositoryName)
-GET     /v1/repositories/:namespace/:repository/images              controllers.Repositories.images(namespace:Namespace, repository:RepositoryName)
-
-PUT     /v1/repositories/:repository/images                         controllers.Repositories.putImagesNoNamespace(repository:RepositoryName)
-PUT     /v1/repositories/:namespace/:repository/images              controllers.Repositories.putImages(namespace:Namespace, repository:RepositoryName)
+GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.Repositories.images(repo:Repository)
+PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.Repositories.putImages(repo:Repository)
 
 GET     /v1/images/:imageId/ancestry    controllers.Images.ancestry(imageId:ImageId)
 GET     /v1/images/:imageId/json        controllers.Images.json(imageId:ImageId)

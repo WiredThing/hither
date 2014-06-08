@@ -15,20 +15,14 @@ import system.LocalIndex
 
 object Repositories extends Controller {
 
-  def imagesNoNamespace(repoName: RepositoryName) = Action.async { implicit request =>
-    getImages(Repository(repoName)).recover {
+  def images(repo: Repository) = Action.async { implicit request =>
+    getImages(repo).recover {
       case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
-  def images(namespace: Namespace, repoName: RepositoryName) = Action.async { implicit request =>
-    getImages(Repository(namespace, repoName)).recover {
-      case NotFoundException(message) => NotFound(JsString(message))
-    }
-  }
 
-  def putImagesNoNamespace(repoName: RepositoryName) = {
-    val repo = Repository(repoName)
+  def putImages(repo: Repository) = {
     LocalIndex.createRepoDir(repo)
 
     Action(parse.file(LocalIndex.buildImagesPath(repo).file)) { implicit request =>
@@ -37,43 +31,21 @@ object Repositories extends Controller {
     }
   }
 
-  def putImages(namespace: Namespace, repoName: RepositoryName) = {
-    val repo = Repository(namespace, repoName)
-    LocalIndex.createRepoDir(repo)
-
-    Action(parse.file(LocalIndex.buildImagesPath(repo).file)) { implicit request =>
-      Logger.info("putImagesNoNamespace")
-      NoContent
-    }
-  }
-
-  def allocateRepoWithoutNamespace(repoName: RepositoryName) = Action(parse.json) { request =>
-    val repo = Repository(repoName)
-
+  def allocateRepo(repo: Repository) = Action(parse.json) { request =>
     IndexService.allocateRepo(repo)
-
     Ok.withHeaders(
       ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
       ("X-Docker-Endpoints", request.headers("Host"))
     )
   }
 
-  def allocateRepo(namespace: Namespace, repositoryName: RepositoryName) = Action(parse.json) { request =>
-    val repo = Repository(namespace, repositoryName)
-
-    Ok.withHeaders(
-      ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
-      ("X-Docker-Endpoints", request.headers("Host"))
-    )
-  }
-
-  private def getImages(repository: Repository): Future[Result] = {
-    val indexFile = LocalIndex.buildImagesPath(repository)
+  private def getImages(repo: Repository): Future[Result] = {
+    val indexFile = LocalIndex.buildImagesPath(repo)
 
     if (indexFile.exists()) {
       Future(Ok.sendFile(indexFile.file))
     } else {
-      IndexService.getImages(repository).map {
+      IndexService.getImages(repo).map {
         case ImageResult(JsError(errs), _) => BadGateway(errs.toString())
         case ImageResult(JsSuccess(images, _), headers) => Ok(Json.toJson(images)).withHeaders(headers: _*)
       }

@@ -1,42 +1,22 @@
-import models.{ImageId, RepositoryName, Namespace}
+import models._
 import play.api.mvc.PathBindable
 
 package object binders {
+  implicit def repoBinder = new PathBindable[Repository] {
+    override def bind(key: String, value: String): Either[String, Repository] = {
+      value.split("/").toList match {
+        case repoName :: Nil => Right(Repository(RepositoryName(repoName)))
+        case namespace :: repoName :: Nil => Right(Repository(Namespace(namespace), RepositoryName(repoName)))
+        case _ => Left(s"Could not convert $value to a Repository")
+      }
+    }
 
-  implicit def OptionBindable[T: PathBindable] = new PathBindable[Option[T]] {
-    def bind(key: String, value: String): Either[String, Option[T]] =
-      implicitly[PathBindable[T]].
-        bind(key, value).
-        fold(
-          left => Left(left),
-          right => Right(Some(right))
-        )
-
-    def unbind(key: String, value: Option[T]): String = value map (_.toString) getOrElse ""
-  }
-
-  implicit def namespaceBinder = new PathBindable[Namespace] {
-    override def bind(key: String, value: String): Either[String, Namespace] =
-      implicitly[PathBindable[String]].
-        bind(key, value).
-        fold(
-          left => Left(left),
-          right => Right(Namespace(right))
-        )
-
-    def unbind(key: String, value: Namespace): String = value.name
-  }
-
-  implicit def repositoryNameBinder = new PathBindable[RepositoryName] {
-    override def bind(key: String, value: String): Either[String, RepositoryName] =
-      implicitly[PathBindable[String]].
-        bind(key, value).
-        fold(
-          left => Left(left),
-          right => Right(RepositoryName(right))
-        )
-
-    def unbind(key: String, value: RepositoryName): String = value.name
+    override def unbind(key: String, repo: Repository): String = {
+      repo match {
+        case Repository(Namespace.default, repoName) => repoName.name
+        case Repository(namespace, repoName) => s"${namespace.name}/${repoName.name}"
+      }
+    }
   }
 
   implicit def imageIdBinder = new PathBindable[ImageId] {
