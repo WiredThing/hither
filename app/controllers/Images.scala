@@ -12,8 +12,8 @@ import play.api.libs.ws.WS
 import play.api.libs.json.{Json, JsString}
 import play.api.libs.iteratee.{Iteratee, Enumerator}
 
-import system.Registry
-import system.Registry.RegistryFile
+import system.LocalRegistry
+import system.LocalRegistry.RegistryFile
 import models.ImageId
 import services.NotFoundException
 
@@ -28,12 +28,12 @@ object Images extends Controller {
 
   def buildAncestry(imageId: ImageId): Future[List[String]] = {
     Logger.info(s"Building ancestry for ${imageId.id}")
-    Registry.findLocalSource(imageId, "ancestry") match {
+    LocalRegistry.findLocalSource(imageId, "ancestry") match {
       case Some(localAncestry) => {
         Logger.info(s"Serving ancestry from ${localAncestry.getAbsolutePath()}")
         Future(Json.parse(localAncestry.source.mkString).as[List[String]])
       }
-      case None => Registry.findLocalSource(imageId, "json") match {
+      case None => LocalRegistry.findLocalSource(imageId, "json") match {
         case Some(r: RegistryFile) => Json.parse(r.source.mkString) \ "parent" match {
           case JsString(parentId) => Logger.info(s"Parent is $parentId"); buildAncestry(ImageId(parentId)).map(imageId.id +: _)
           case _ => Future(List())
@@ -63,7 +63,7 @@ object Images extends Controller {
   }
 
   private def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
-    val result = Registry.findLocalSource(imageId, extension) match {
+    val result = LocalRegistry.findLocalSource(imageId, extension) match {
       case Some(localSource) =>
         Logger.info(s"Supplying $extension for ${imageId.id} from ${localSource.kind}")
         Future((Enumerator.fromFile(localSource.file), contentType, Some(localSource.length().toString)))
@@ -82,20 +82,20 @@ object Images extends Controller {
     }
   }
 
-  def putJson(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.json").file)) {
+  def putJson(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.json").file)) {
     request =>
       Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
       Ok(JsString(""))
   }
 
 
-  def putLayer(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.layer").file)) {
+  def putLayer(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.layer").file)) {
     request =>
       Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
       Ok(JsString(""))
   }
 
-  def putChecksum(imageId: ImageId) = Action(parse.file(Registry.buildRegistryPath(s"${imageId.id}.checksum").file)) {
+  def putChecksum(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.checksum").file)) {
     request =>
       Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
       Ok(JsString(""))
@@ -111,7 +111,7 @@ object Images extends Controller {
           val contentType = response.headers.get("Content-Type").flatMap(_.headOption)
             .getOrElse("binary/octet-stream")
 
-          val cacheFile = Registry.buildCachePath(cacheFileName)
+          val cacheFile = LocalRegistry.buildCachePath(cacheFileName)
           val os = new FileOutputStream(cacheFile.file)
 
           val fileWriter: Enumerator[Array[Byte]] = body.map {

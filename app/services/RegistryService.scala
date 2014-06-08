@@ -9,7 +9,7 @@ import play.api.libs.json.{Json, JsResult}
 import play.api.libs.ws.WS
 
 import models._
-import system.Registry
+import system.LocalRegistry
 import system.LocalSource
 
 trait ServiceResult[T]
@@ -41,7 +41,7 @@ object RegistryService {
   }
 
   def json(imageId: ImageId): Future[ServiceResult[LayerDescriptor]] = {
-    Registry.findLocalSource(imageId, "json") match {
+    LocalRegistry.findLocalSource(imageId, "json") match {
       case Some(localSource) => Logger.info(s"Serving json from local file ${localSource.getAbsolutePath}")
         processJsonFile(localSource)
 

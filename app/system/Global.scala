@@ -7,7 +7,7 @@ object Global extends GlobalSettings{
     super.onStart(app)
 
     Logger.info("Creating registry and index directories")
-    Registry.createDirs
-    Index.createDirs
+    LocalRegistry.createDirs
+    LocalIndex.createDirs
   }
 }

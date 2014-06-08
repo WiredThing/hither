@@ -1,39 +1,37 @@
 package controllers
 
-import play.api.mvc.{Request, Result, Action, Controller}
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.WS
-import models.{Repository, Namespace, RepositoryName}
-import play.api.libs.json.{JsValue, Json, JsString}
-import system.Index
-import java.io.{FileOutputStream, File, FileFilter}
-import scala.concurrent.Future
 import scala.io.Source
+import scala.concurrent.Future
+
+import java.io.{FileOutputStream, File, FileFilter}
+
+import play.api.mvc.{Request, Result, Action, Controller}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{JsValue, Json, JsString}
 import play.api.Logger
 
+import models.{Repository, Namespace, RepositoryName}
+import system.LocalIndex
+import services.TagService
+
 object Tags extends Controller {
-  def tagsWithoutNamespace(repository: RepositoryName) = Action.async { implicit request =>
-    val tagsDir = Index.buildTagsDir(Repository(None, repository))
+  def tagsWithoutNamespace(repoName: RepositoryName) = Action.async { implicit request =>
+    val tagsDir = LocalIndex.buildTagsDir(Repository(repoName))
     Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
     if (tagsDir.exists()) {
       feedTagsFromLocal(tagsDir)
     } else {
-      WS.url(s"http://registry-1.docker.io/v1/repositories/$repository/tags").get().map {
-        response => Ok(response.json)
-      }
+      TagService.getTags(repoName).map(Ok(_))
     }
   }
 
-  def tags(namespace: Namespace, repository: RepositoryName) = Action.async { implicit request =>
-    val tagsDir = Index.buildTagsDir(Repository(Some(namespace), repository))
+  def tags(namespace: Namespace, repoName: RepositoryName) = Action.async { implicit request =>
+    val tagsDir = LocalIndex.buildTagsDir(Repository(namespace, repoName))
     Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
     if (tagsDir.exists()) {
       feedTagsFromLocal(tagsDir)
     } else {
-      WS.url(s"http://registry-1.docker.io/v1/repositories/${namespace.name}/${repository.name}/tags").get().map {
-        response => Ok(response.json)
-      }
+      TagService.getTags(namespace, repoName).map(Ok(_))
     }
   }
 
@@ -42,7 +40,6 @@ object Tags extends Controller {
       override def accept(f: File): Boolean = f.isFile
     }
 
-
     val tags = tagsDir.listFiles(filter).map { tagFile =>
       (tagFile.getName(), Source.fromFile(tagFile).mkString)
     }
@@ -50,35 +47,31 @@ object Tags extends Controller {
     Future(Ok(Json.toJson(Map(tags: _*))))
   }
 
-  def tagNameWithoutNamespace(repository: RepositoryName, tagName: String) = Action.async { implicit request =>
-    WS.url(s"http://registry-1.docker.io/v1/repositories/$repository/tags/$tagName").get().map {
-      response => Ok(response.json)
-    }
+  def tagNameWithoutNamespace(repoName: RepositoryName, tagName: String) = Action.async { implicit request =>
+    TagService.getTag(repoName, tagName).map(Ok(_))
   }
 
   def tagName(namespace: Namespace, repository: RepositoryName, tagName: String) = Action.async { implicit request =>
-    WS.url(s"http://registry-1.docker.io/v1/repositories/$namespace/$repository/tags/$tagName").get().map {
-      response => Ok(response.json)
-    }
+    TagService.getTag(namespace, repository, tagName).map(Ok(_))
   }
 
-  def putTagNameWithoutNamespace(repository: RepositoryName, tagName: String) = {
+  def putTagNameWithoutNamespace(repoName: RepositoryName, tagName: String) = {
     Action(parse.json) { request =>
-      writeTagsfile(None, repository, tagName, request)
+      writeTagsfile(Repository(repoName), tagName, request)
     }
   }
 
   def putTagName(namespace: Namespace, repository: RepositoryName, tagName: String) = {
     Action(parse.json) { request =>
-      writeTagsfile(Some(namespace), repository, tagName, request)
+      writeTagsfile(Repository(namespace, repository), tagName, request)
     }
   }
 
-  def writeTagsfile(namespace: Option[Namespace], repository: RepositoryName, tagName: String, request: Request[JsValue]): Result = {
+  def writeTagsfile(repository: Repository, tagName: String, request: Request[JsValue]): Result = {
     request.body match {
       case JsString(value) =>
         Logger.info(s"tag value is $value")
-        val tagsDir = Index.buildTagsDir(Repository(namespace, repository))
+        val tagsDir = LocalIndex.buildTagsDir(repository)
         tagsDir.mkdirs()
         val fos = new FileOutputStream(new File(tagsDir, tagName))
         fos.write(value.getBytes)

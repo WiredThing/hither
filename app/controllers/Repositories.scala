@@ -10,45 +10,45 @@ import play.api.mvc.Result
 import services.IndexService.ImageResult
 import models.{Repository, RepositoryName, Namespace}
 import play.api.Logger
-import system.Index
+import system.LocalIndex
 
 
 object Repositories extends Controller {
 
-  def imagesNoNamespace(repository: RepositoryName) = Action.async { implicit request =>
-    getImages(Repository(None, repository)).recover {
+  def imagesNoNamespace(repoName: RepositoryName) = Action.async { implicit request =>
+    getImages(Repository(repoName)).recover {
       case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
-  def images(namespace: Namespace, repository: RepositoryName) = Action.async { implicit request =>
-    getImages(Repository(Some(namespace), repository)).recover {
+  def images(namespace: Namespace, repoName: RepositoryName) = Action.async { implicit request =>
+    getImages(Repository(namespace, repoName)).recover {
       case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
-  def putImagesNoNamespace(repository: RepositoryName) = {
-    val repo = Repository(None, repository)
-    Index.createRepoDir(repo)
+  def putImagesNoNamespace(repoName: RepositoryName) = {
+    val repo = Repository(repoName)
+    LocalIndex.createRepoDir(repo)
 
-    Action(parse.file(Index.buildImagesPath(repo).file)) { implicit request =>
+    Action(parse.file(LocalIndex.buildImagesPath(repo).file)) { implicit request =>
       Logger.info("putImagesNoNamespace")
       NoContent
     }
   }
 
-  def putImages(namespace: Namespace, repository: RepositoryName) = {
-    val repo = Repository(Some(namespace), repository)
-    Index.createRepoDir(repo)
+  def putImages(namespace: Namespace, repoName: RepositoryName) = {
+    val repo = Repository(namespace, repoName)
+    LocalIndex.createRepoDir(repo)
 
-    Action(parse.file(Index.buildImagesPath(repo).file)) { implicit request =>
+    Action(parse.file(LocalIndex.buildImagesPath(repo).file)) { implicit request =>
       Logger.info("putImagesNoNamespace")
       NoContent
     }
   }
 
-  def allocateRepoWithoutNamespace(repositoryName: RepositoryName) = Action(parse.json) { request =>
-    val repo = Repository(None, repositoryName)
+  def allocateRepoWithoutNamespace(repoName: RepositoryName) = Action(parse.json) { request =>
+    val repo = Repository(repoName)
 
     IndexService.allocateRepo(repo)
 
@@ -59,7 +59,7 @@ object Repositories extends Controller {
   }
 
   def allocateRepo(namespace: Namespace, repositoryName: RepositoryName) = Action(parse.json) { request =>
-    val repo = Repository(Some(namespace), repositoryName)
+    val repo = Repository(namespace, repositoryName)
 
     Ok.withHeaders(
       ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
@@ -68,7 +68,7 @@ object Repositories extends Controller {
   }
 
   private def getImages(repository: Repository): Future[Result] = {
-    val indexFile = Index.buildImagesPath(repository)
+    val indexFile = LocalIndex.buildImagesPath(repository)
 
     if (indexFile.exists()) {
       Future(Ok.sendFile(indexFile.file))

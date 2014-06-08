@@ -4,10 +4,10 @@ import java.io.File
 import models.ImageId
 import play.api.Logger
 
-object Registry {
+object LocalRegistry {
 
   def findLocalSource(imageId: ImageId, extension: String): Option[LocalSource] = {
-    List(Registry.buildRegistryPath(s"${imageId.id}.$extension").existing, Registry.buildCachePath(s"${imageId.id}.$extension").existing).flatten.headOption
+    List(LocalRegistry.buildRegistryPath(s"${imageId.id}.$extension").existing, LocalRegistry.buildCachePath(s"${imageId.id}.$extension").existing).flatten.headOption
   }
 
   def createDirs: Unit = {

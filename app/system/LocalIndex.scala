@@ -4,7 +4,9 @@ import models.Repository
 import java.io.File
 import play.api.Logger
 
-object Index {
+object LocalIndex {
+
+  def repos:List[Repository] = ???
 
   def createDirs() : Unit = {
     Logger.info(s"Creating $root")

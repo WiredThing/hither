@@ -13,8 +13,6 @@ case class Repository(namespace: Namespace, repoName: RepositoryName) {
 }
 
 object Repository {
-  def apply(namespace:Option[Namespace], repoName:RepositoryName) : Repository = {
-    Repository(namespace.getOrElse(Namespace.default), repoName)
-  }
+  def apply(repoName: RepositoryName): Repository = Repository(Namespace.default, repoName)
 }
 
