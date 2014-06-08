@@ -12,7 +12,9 @@ import scala.io.Source
 import play.api.Logger
 import system.LocalIndex
 
-object TagService {
+object TagService extends TagService
+
+trait TagService {
   def getTag(repo: Repository, tagName: String): Future[JsValue] = {
     WS.url(s"http://registry-1.docker.io/v1/repositories/${repo.qualifiedName}/tags/$tagName").get().map {
       response => response.json

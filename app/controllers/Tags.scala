@@ -11,7 +11,14 @@ import models.Repository
 import services.TagService
 import system.LocalIndex
 
-object Tags extends Controller {
+object Tags extends Tags {
+  lazy val tagService = TagService
+}
+
+trait Tags extends Controller {
+
+  def tagService : TagService
+
   def tags(repo: Repository) = Action.async { implicit request =>
     val tagsDir = LocalIndex.buildTagsDir(repo)
     Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
