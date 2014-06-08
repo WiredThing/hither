@@ -1,40 +1,25 @@
 package controllers
 
-import scala.io.Source
 import scala.concurrent.Future
 
-import java.io.{FileOutputStream, File, FileFilter}
-
-import play.api.mvc.{Request, Result, Action, Controller}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsValue, Json, JsString}
 import play.api.Logger
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{JsString, Json}
+import play.api.mvc.{Action, Controller}
 
-import models.{Repository, Namespace, RepositoryName}
-import system.LocalIndex
+import models.Repository
 import services.TagService
+import system.LocalIndex
 
 object Tags extends Controller {
   def tags(repo: Repository) = Action.async { implicit request =>
     val tagsDir = LocalIndex.buildTagsDir(repo)
     Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
     if (tagsDir.exists()) {
-      feedTagsFromLocal(tagsDir)
+      TagService.feedTagsFromLocal(tagsDir).map(tags => Ok(Json.toJson(tags)))
     } else {
       TagService.getTags(repo).map(Ok(_))
     }
-  }
-
-  def feedTagsFromLocal(tagsDir: File): Future[Result] = {
-    val filter = new FileFilter {
-      override def accept(f: File): Boolean = f.isFile
-    }
-
-    val tags = tagsDir.listFiles(filter).map { tagFile =>
-      (tagFile.getName(), Source.fromFile(tagFile).mkString)
-    }
-
-    Future(Ok(Json.toJson(Map(tags: _*))))
   }
 
   def tagName(repo: Repository, tagName: String) = Action.async { implicit request =>
@@ -42,23 +27,11 @@ object Tags extends Controller {
   }
 
   def putTagName(repo: Repository, tagName: String) = {
-    Action(parse.json) { request =>
-      writeTagsfile(repo, tagName, request)
-    }
-  }
-
-  def writeTagsfile(repository: Repository, tagName: String, request: Request[JsValue]): Result = {
-    request.body match {
-      case JsString(value) =>
-        Logger.info(s"tag value is $value")
-        val tagsDir = LocalIndex.buildTagsDir(repository)
-        tagsDir.mkdirs()
-        val fos = new FileOutputStream(new File(tagsDir, tagName))
-        fos.write(value.getBytes)
-        fos.close()
-        Ok(JsString(""))
-
-      case _ => BadRequest
+    Action.async(parse.json) { request =>
+      request.body match {
+        case JsString(value) => TagService.writeTagsfile(repo, tagName, value).map(_ => Ok(JsString("")))
+        case _ => Future.successful(BadRequest)
+      }
     }
   }
 }
