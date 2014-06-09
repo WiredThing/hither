@@ -9,8 +9,7 @@ import play.api.libs.json.{Json, JsResult}
 import play.api.libs.ws.WS
 
 import models._
-import system.LocalRegistry
-import system.LocalSource
+import system.{Configuration, LocalRegistry, LocalSource}
 
 trait ServiceResult[T]
 
@@ -20,11 +19,17 @@ case class ErrorResult[T](code: Int) extends ServiceResult[T]
 
 case class JsonResult[T](images: JsResult[T], headers: List[(String, String)]) extends ServiceResult[T]
 
-object RegistryService {
+object RegistryService extends RegistryService {
+  override def registryHostName = Configuration.registryHostName
+}
+
+trait RegistryService {
   val headersToCopy = List("x-docker-token", "date", "Connection")
 
+  def registryHostName: String
+
   def ancestry(imageId: ImageId): Future[ServiceResult[List[ImageId]]] = {
-    WS.url(s"http://registry-1.docker.io/v1/images/${imageId.id}/ancestry").get().map { response =>
+    WS.url(s"http://$registryHostName/v1/images/${imageId.id}/ancestry").get().map { response =>
       val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
 
       response.status match {
@@ -46,7 +51,7 @@ object RegistryService {
         processJsonFile(localSource)
 
       case None =>
-        WS.url(s"http://registry-1.docker.io/v1/images/${imageId.id}/json").get().map { response =>
+        WS.url(s"http://$registryHostName/v1/images/${imageId.id}/json").get().map { response =>
           val responseHeaders = headersToCopy.map { key => response.header(key).map((key, _))}.flatten
 
           response.status match {
@@ -63,8 +68,7 @@ object RegistryService {
   }
 
 
-
-  def processJsonFile(source:LocalSource): Future[JsonResult[LayerDescriptor]] = {
+  def processJsonFile(source: LocalSource): Future[JsonResult[LayerDescriptor]] = {
     Future {
       val json = Json.parse(source.asString())
       val v = json.validate[LayerLink].map(layerLink => LayerDescriptor(layerLink, json))

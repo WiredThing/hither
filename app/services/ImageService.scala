@@ -11,7 +11,7 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 
 import models.ImageId
-import system.LocalRegistry
+import system.{Configuration, LocalRegistry}
 import play.api.libs.json.{JsString, Json}
 
 case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: String, contentLength: Option[Long])
@@ -20,6 +20,8 @@ object ImageService extends ImageService {
 
   import play.api.libs.ws.WS
   import java.io.{File, FileOutputStream}
+
+  override def registryHostName = Configuration.registryHostName
 
   override def logger: LoggerLike = play.api.Logger
 
@@ -65,6 +67,8 @@ trait ImageService {
 
   val localRegistry: LocalRegistry
 
+  def registryHostName:String
+
   import localRegistry.RegistryFile
 
   def respondFromUrl(cacheFileName: String, url: String): Future[ContentEnumerator]
@@ -77,7 +81,7 @@ trait ImageService {
 
       case None =>
         logger.info(s"Going to docker for ${imageId.id}/$extension")
-        respondFromUrl(s"${imageId.id}.$extension", s"http://registry-1.docker.io/v1/images/${imageId.id}/$extension")
+        respondFromUrl(s"${imageId.id}.$extension", s"http://$registryHostName/v1/images/${imageId.id}/$extension")
     }
     result
   }

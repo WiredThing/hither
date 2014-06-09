@@ -8,22 +8,25 @@ trait LocalSource {
 
   def kind: String
 
-  def source = Source.fromFile(file)
+  def source: Source = Source.fromFile(file)
 
-  def mkdirs() = {file.mkdirs(); this}
+  def mkdirs() = {
+    file.mkdirs();
+    this
+  }
 
-  def exists() = file.exists()
+  def exists(): Boolean = file.exists()
 
   def getAbsolutePath() = file.getAbsolutePath()
 
-  def length() = file.length()
+  def length(): Long = file.length()
 
-  def asString() : String = {
+  def asString(): String = {
     val s = Source.fromFile(file)
     val string = s.mkString
     s.close()
     string
   }
 
-  def existing:Option[LocalSource] = if (exists()) Some(this) else None
+  def existing: Option[LocalSource] = if (exists()) Some(this) else None
 }

@@ -10,19 +10,24 @@ import play.api.libs.json.JsValue
 import java.io.{FileOutputStream, FileFilter, File}
 import scala.io.Source
 import play.api.Logger
-import system.LocalIndex
+import system.{Configuration, LocalIndex}
 
-object TagService extends TagService
+object TagService extends TagService {
+  override def registryHostName: String = Configuration.registryHostName
+}
 
 trait TagService {
+
+  def registryHostName: String
+
   def getTag(repo: Repository, tagName: String): Future[JsValue] = {
-    WS.url(s"http://registry-1.docker.io/v1/repositories/${repo.qualifiedName}/tags/$tagName").get().map {
+    WS.url(s"http://$registryHostName/v1/repositories/${repo.qualifiedName}/tags/$tagName").get().map {
       response => response.json
     }
   }
 
   def getTags(repo: Repository): Future[JsValue] = {
-    WS.url(s"http://registry-1.docker.io/v1/repositories/${repo.qualifiedName}/tags").get().map {
+    WS.url(s"http://$registryHostName/v1/repositories/${repo.qualifiedName}/tags").get().map {
       response => response.json
     }
   }

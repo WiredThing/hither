@@ -13,11 +13,15 @@ object Configuration {
 
   lazy val cacheRoot = Play.configuration.getString("registry.cache.root").getOrElse("/tmp/registry-cache")
 
+  lazy val registryHostName = Play.configuration.getString("docker.registry.hostname").get
 
-  def buildRepoIndexPath(repo: Repository): File =  {
+  lazy val indexHostName = Play.configuration.getString("docker.index.hostname").get
+
+
+  def buildRepoIndexPath(repo: Repository): File = {
     val indexRoot = new File(system.Configuration.indexRoot)
 
-    val path =  new File(new File(indexRoot, repo.namespace.name), repo.repoName.name)
+    val path = new File(new File(indexRoot, repo.namespace.name), repo.repoName.name)
 
     path.mkdirs()
 
