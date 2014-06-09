@@ -16,6 +16,7 @@ import system.LocalRegistry
 import system.LocalRegistry.RegistryFile
 import models.ImageId
 import services.NotFoundException
+import scala.util.Try
 
 
 object Images extends Controller {
@@ -38,8 +39,8 @@ object Images extends Controller {
           case JsString(parentId) => Logger.info(s"Parent is $parentId"); buildAncestry(ImageId(parentId)).map(imageId.id +: _)
           case _ => Future(List())
         }
-        case _ => findData(imageId, "ancestry").flatMap { t =>
-          val (e, _, _) = t
+        case _ => findData(imageId, "ancestry").flatMap { ce =>
+          val e = ce.content
 
           e.run(Iteratee.getChunks).map { byteArrays =>
             val s = byteArrays.map(new String(_)).mkString
@@ -51,22 +52,22 @@ object Images extends Controller {
   }
 
   def json(imageId: ImageId) = Action.async { implicit request =>
-    findData(imageId, "json").map(feedResult).recover {
+    findData(imageId, "json").map(feedContent).recover {
       case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
   def layer(imageId: ImageId) = Action.async { implicit request =>
-    findData(imageId, "layer", "binary/octet-stream").map(feedResult).recover {
+    findData(imageId, "layer", "binary/octet-stream").map(feedContent).recover {
       case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
-  private def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
+  private def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[ContentEnumerator] = {
     val result = LocalRegistry.findLocalSource(imageId, extension) match {
       case Some(localSource) =>
         Logger.info(s"Supplying $extension for ${imageId.id} from ${localSource.kind}")
-        Future((Enumerator.fromFile(localSource.file), contentType, Some(localSource.length().toString)))
+        Future(ContentEnumerator(Enumerator.fromFile(localSource.file), contentType, Some(localSource.length())))
 
       case None =>
         Logger.info(s"Going to docker for ${imageId.id}/$extension")
@@ -75,33 +76,32 @@ object Images extends Controller {
     result
   }
 
-  def feedResult(result: (Enumerator[Array[Byte]], String, Option[String])): Result = {
-    result match {
-      case (e, contentType, Some(length)) => Ok.feed(e).as(contentType).withHeaders("Content-Length" -> length)
-      case (e, contentType, None) => Ok.chunked(e).as(contentType)
+  case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: String, contentLength: Option[Long])
+
+  def feedContent(content: ContentEnumerator): Result = {
+    content match {
+      case ContentEnumerator(e, contentType, Some(length)) => Ok.feed(e).as(contentType).withHeaders("Content-Length" -> length.toString)
+      case ContentEnumerator(e, contentType, None) => Ok.chunked(e).as(contentType)
     }
   }
 
-  def putJson(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.json").file)) {
-    request =>
-      Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
-      Ok(JsString(""))
+  def putJson(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.json").file)) { request =>
+    Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
   }
 
 
-  def putLayer(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.layer").file)) {
-    request =>
-      Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
-      Ok(JsString(""))
+  def putLayer(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.layer").file)) { request =>
+    Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
   }
 
-  def putChecksum(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.checksum").file)) {
-    request =>
-      Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
-      Ok(JsString(""))
+  def putChecksum(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.checksum").file)) { request =>
+    Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
   }
 
-  def respondFromUrl(cacheFileName: String, url: String): Future[(Enumerator[Array[Byte]], String, Option[String])] = {
+  def respondFromUrl(cacheFileName: String, url: String): Future[ContentEnumerator] = {
     WS.url(url).getStream().map {
       case (response, body) =>
 
@@ -122,11 +122,15 @@ object Images extends Controller {
 
           fileWriter.onDoneEnumerating(os.close())
 
+          object AsLong {
+            def unapply(s: String): Option[Long] = Try(s.toLong).toOption
+          }
+
           // If there's a content length, send that, otherwise return the body chunked
           response.headers.get("Content-Length") match {
-            case Some(Seq(length)) => (fileWriter, contentType, Some(length))
+            case Some(Seq(AsLong(length))) => ContentEnumerator(fileWriter, contentType, Some(length))
 
-            case _ => (fileWriter, contentType, None)
+            case _ => ContentEnumerator(fileWriter, contentType, None)
 
           }
         } else {
