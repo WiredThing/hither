@@ -8,8 +8,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.{Image, Repository}
 import system.Configuration
 
+object IndexService extends IndexService
 
-object IndexService {
+trait IndexService {
 
   case class ImageResult(images: JsResult[List[Image]], headers: List[(String, String)])
 

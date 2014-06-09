@@ -4,11 +4,13 @@ import models.Repository
 import java.io.File
 import play.api.Logger
 
-object LocalIndex {
+object LocalIndex extends LocalIndex
 
-  def repos:List[Repository] = ???
+trait LocalIndex {
 
-  def createDirs() : Unit = {
+  def repos: List[Repository] = ???
+
+  def createDirs(): Unit = {
     Logger.info(s"Creating $root")
     root.mkdirs()
   }
@@ -35,10 +37,10 @@ object LocalIndex {
     new File(buildRepoDir(repo), "tags")
   }
 
-  def createRepoDir(repo:Repository) = buildRepoDir(repo).mkdirs()
+  def createRepoDir(repo: Repository) = buildRepoDir(repo).mkdirs()
 
   def buildRepoDir(repo: Repository): File = {
-    val name =  s"${repo.namespace.name}/${repo.repoName.name}"
+    val name = s"${repo.namespace.name}/${repo.repoName.name}"
     new File(root, name)
   }
 
