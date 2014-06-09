@@ -11,10 +11,14 @@ import services.{ContentEnumerator, ImageService, NotFoundException}
 
 object Images extends Images {
   override def imageService = ImageService
+
+  override def localRegistry: LocalRegistry = LocalRegistry
 }
 
 trait Images extends Controller {
   def imageService: ImageService
+
+  def localRegistry: LocalRegistry
 
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
     Logger.info(s"get ancestry for ${imageId.id}")
@@ -35,27 +39,26 @@ trait Images extends Controller {
     }
   }
 
+  def putJson(imageId: ImageId) = Action(parse.file(localRegistry.buildRegistryPath(s"${imageId.id}.json").file)) { request =>
+    Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
+  }
+
+  def putLayer(imageId: ImageId) = Action(parse.file(localRegistry.buildRegistryPath(s"${imageId.id}.layer").file)) { request =>
+    Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
+  }
+
+
+  def putChecksum(imageId: ImageId) = Action(parse.file(localRegistry.buildRegistryPath(s"${imageId.id}.checksum").file)) { request =>
+    Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
+    Ok(JsString(""))
+  }
 
   def feedContent(content: ContentEnumerator): Result = {
     content match {
       case ContentEnumerator(e, contentType, Some(length)) => Ok.feed(e).as(contentType).withHeaders("Content-Length" -> length.toString)
       case ContentEnumerator(e, contentType, None) => Ok.chunked(e).as(contentType)
     }
-  }
-
-  def putJson(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.json").file)) { request =>
-    Logger.info(s"Layer json pushed to ${request.body.getAbsolutePath}")
-    Ok(JsString(""))
-  }
-
-
-  def putLayer(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.layer").file)) { request =>
-    Logger.info(s"Layer pushed to ${request.body.getAbsolutePath}")
-    Ok(JsString(""))
-  }
-
-  def putChecksum(imageId: ImageId) = Action(parse.file(LocalRegistry.buildRegistryPath(s"${imageId.id}.checksum").file)) { request =>
-    Logger.info(s"Checksum pushed to ${request.body.getAbsolutePath}")
-    Ok(JsString(""))
   }
 }
