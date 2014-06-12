@@ -6,7 +6,7 @@ import models.ImageId
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.LoggerLike
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import system.{LocalRegistry, LocalSource}
+import system.{RegistryType, LocalRegistry, LocalSource}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -16,7 +16,7 @@ import scala.io.Source
 class ImageServiceTest extends FlatSpec with Matchers {
   "findData" should "return a ContentEnumerator from the local source if it exists" in {
     val fr = for {
-      ce <- TestImageService.findData(ImageId("local"), TestImageService.testType, "content/type")
+      ce <- TestImageService.findData(ImageId("local"), RegistryType.JsonType, "content/type")
       byteArrays <- ce.content.run(Iteratee.getChunks)
     } yield byteArrays.map(new String(_)).mkString
 
@@ -25,7 +25,7 @@ class ImageServiceTest extends FlatSpec with Matchers {
 
   it should "return a ContentEnumerator from a url if no local source exists" in {
     val fr = for {
-      ce <- TestImageService.findData(ImageId("url"), TestImageService.testType, "content/type")
+      ce <- TestImageService.findData(ImageId("url"), RegistryType.JsonType, "content/type")
       byteArrays <- ce.content.run(Iteratee.getChunks)
     } yield byteArrays.map(new String(_)).mkString
 
@@ -51,16 +51,15 @@ class ImageServiceTest extends FlatSpec with Matchers {
   }
 
   val dummyLocalRegistry = new LocalRegistry {
-    override def findLocalSource(imageId: ImageId, extension: String): Option[LocalSource] = imageId match {
+    override def findLocalSource(imageId: ImageId, dataType: RegistryType): Option[LocalSource] = imageId match {
       case ImageId("local") => Some(dummyLocalSource)
       case _ => None
     }
   }
 
   object TestImageService extends ImageService {
-    case object testType extends DataType {
-      override def name: String = "test"
-    }
+    override val localRegistry: LocalRegistry = dummyLocalRegistry
+
 
     override def logger: LoggerLike = DummyLogger
 
@@ -72,7 +71,6 @@ class ImageServiceTest extends FlatSpec with Matchers {
     }
 
     override def registryHostName: String = ""
-
-    override val localRegistry: LocalRegistry = dummyLocalRegistry
   }
+
 }

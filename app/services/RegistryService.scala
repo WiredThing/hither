@@ -9,7 +9,7 @@ import play.api.libs.json.{Json, JsResult}
 import play.api.libs.ws.WS
 
 import models._
-import system.{ProductionLocalRegistry, Configuration, LocalRegistry, LocalSource}
+import system._
 
 trait ServiceResult[T]
 
@@ -22,7 +22,7 @@ case class JsonResult[T](images: JsResult[T], headers: List[(String, String)]) e
 object RegistryService extends RegistryService {
   override def registryHostName = Configuration.registryHostName
 
-  override def localRegistry = ProductionLocalRegistry
+  override lazy val localRegistry = ProductionLocalRegistry
 }
 
 trait RegistryService {
@@ -30,7 +30,7 @@ trait RegistryService {
 
   def registryHostName: String
 
-  def localRegistry: LocalRegistry
+  val localRegistry: LocalRegistry
 
   def ancestry(imageId: ImageId): Future[ServiceResult[List[ImageId]]] = {
     WS.url(s"http://$registryHostName/v1/images/${imageId.id}/ancestry").get().map { response =>
@@ -50,7 +50,7 @@ trait RegistryService {
   }
 
   def json(imageId: ImageId): Future[ServiceResult[LayerDescriptor]] = {
-    localRegistry.findLocalSource(imageId, "json") match {
+    localRegistry.findLocalSource(imageId, RegistryType.JsonType) match {
       case Some(localSource) => Logger.info(s"Serving json from local file ${localSource.getAbsolutePath}")
         processJsonFile(localSource)
 

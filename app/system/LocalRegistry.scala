@@ -1,15 +1,28 @@
 package system
 
 import java.io.File
+
 import models.ImageId
 import play.api.Logger
 
 object ProductionLocalRegistry extends LocalRegistry
 
+case class RegistryType(name: String)
+
+object RegistryType {
+  val AncestryType = RegistryType("ancestry")
+  val JsonType = RegistryType("json")
+  val LayerType = RegistryType("layer")
+  val ChecksumType = RegistryType("checksum")
+}
+
 trait LocalRegistry {
 
-  def findLocalSource(imageId: ImageId, extension: String): Option[LocalSource] = {
-    List(buildRegistryPath(s"${imageId.id}.$extension").existing, buildCachePath(s"${imageId.id}.$extension").existing).flatten.headOption
+  def findLocalSource(imageId: ImageId, dataType: RegistryType): Option[LocalSource] = {
+    List(
+      buildRegistryPath(s"${imageId.id}.${dataType.name}").existing,
+      buildCachePath(s"${imageId.id}.${dataType.name}").existing
+    ).flatten.headOption
   }
 
   def createDirs: Unit = {
