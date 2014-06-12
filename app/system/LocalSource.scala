@@ -8,8 +8,6 @@ import scala.io.Source
 
 trait LocalSource {
 
-  def kind: String
-
   def source: Source
 
   def enumerator(implicit ctx: ExecutionContext): Enumerator[Array[Byte]]

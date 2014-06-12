@@ -24,13 +24,9 @@ trait LocalRegistry {
 
   def registryRoot: File = new File(system.Configuration.registryRoot)
 
-  case class RegistryFile(file: File) extends FileLocalSource {
-    val kind = "registry"
-  }
+  case class RegistryFile(file: File) extends FileLocalSource
 
-  case class CacheFile(file: File) extends FileLocalSource {
-    val kind = "cache"
-  }
+  case class CacheFile(file: File) extends FileLocalSource
 
   def buildRegistryPath(name: String): RegistryFile = RegistryFile(new File(registryRoot, name))
 

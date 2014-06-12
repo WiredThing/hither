@@ -1,6 +1,7 @@
 package services
 
 
+import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.util.Try
 
@@ -60,6 +61,8 @@ object ProductionImageService extends ImageService {
         }
     }
   }
+
+
 }
 
 trait ImageService {
@@ -75,6 +78,10 @@ trait ImageService {
     def name: String
   }
 
+  case object AncestryType extends DataType {
+    val name = "ancestry"
+  }
+
   case object JsonType extends DataType {
     val name = "json"
   }
@@ -83,17 +90,12 @@ trait ImageService {
     val name = "layer"
   }
 
-  case object AncestryType extends DataType {
-    val name = "ancestry"
-  }
-
-
   def respondFromUrl(cacheFileName: String, url: String): Future[ContentEnumerator]
 
   def findData(imageId: ImageId, dataType: DataType, contentType: String = "application/json"): Future[ContentEnumerator] = {
     val result = localRegistry.findLocalSource(imageId, dataType.name) match {
       case Some(localSource) =>
-        logger.info(s"Supplying ${dataType.name} for ${imageId.id} from ${localSource.kind}")
+        logger.info(s"Supplying ${dataType.name} for ${imageId.id} from ${localSource}")
         Future(ContentEnumerator(localSource.enumerator, contentType, Some(localSource.length())))
 
       case None =>
