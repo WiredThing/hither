@@ -15,17 +15,22 @@ class PrivateRegistry extends Registry {
     findResource(imageId, LayerType)
   }
 
-  override def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    if (buildRegistryPath(s"${imageId.id}.${LayerType.name}").exists()) {
-      constructAncestry(imageId)
-    } else {
-      Future(None)
-    }
-  }
-
   override def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     findResource(imageId, JsonType)
   }
+
+  override def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
+    findResource(imageId, AncestryType) flatMap {
+      case Some(ce) => Future(Some(ce))
+      case None => if (buildRegistryPath(s"${imageId.id}.${LayerType.name}").exists()) {
+        constructAncestry(imageId)
+      } else {
+        Future(None)
+      }
+    }
+  }
+
+  protected def constructAncestry(imageId: ImageId): Future[Option[ContentEnumerator]] = ???
 
   protected def findResource(imageId: ImageId, registryType: RegistryType): Future[Option[ContentEnumerator]] = {
     val ce = buildRegistryPath(s"${imageId.id}.${registryType.name}").existing match {
@@ -35,8 +40,6 @@ class PrivateRegistry extends Registry {
 
     Future.successful(ce)
   }
-
-  def constructAncestry(imageId: ImageId): Future[Option[ContentEnumerator]] = ???
 
   override def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit]): Unit = ???
 
