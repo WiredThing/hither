@@ -1,25 +1,48 @@
 package system
 
 import java.io.File
+import play.api.libs.iteratee.Enumerator
+
+import scala.concurrent.ExecutionContext
 import scala.io.Source
 
 trait LocalSource {
-  def file: File
 
   def kind: String
 
-  def source: Source = Source.fromFile(file)
+  def source: Source
 
-  def mkdirs() = {
+  def enumerator(implicit ctx: ExecutionContext): Enumerator[Array[Byte]]
+
+  def mkdirs(): LocalSource
+
+  def exists(): Boolean
+
+  def getAbsolutePath()
+
+  def length(): Long
+
+  def asString(): String
+
+  def existing: Option[LocalSource] = if (exists()) Some(this) else None
+}
+
+trait FileLocalSource extends LocalSource {
+  def file: File
+
+
+  override def length(): Long = file.length()
+
+  override def source: Source = Source.fromFile(file)
+
+  override def mkdirs(): LocalSource = {
     file.mkdirs();
     this
   }
 
-  def exists(): Boolean = file.exists()
+  override def getAbsolutePath(): Unit = file.getAbsolutePath
 
-  def getAbsolutePath() = file.getAbsolutePath()
-
-  def length(): Long = file.length()
+  override def enumerator(implicit ctx: ExecutionContext): Enumerator[Array[Byte]] = Enumerator.fromFile(file)
 
   def asString(): String = {
     val s = Source.fromFile(file)
@@ -28,5 +51,5 @@ trait LocalSource {
     string
   }
 
-  def existing: Option[LocalSource] = if (exists()) Some(this) else None
+  override def exists(): Boolean = file.exists()
 }

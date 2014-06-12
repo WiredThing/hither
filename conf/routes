@@ -18,14 +18,14 @@ PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/                    c
 GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.Repositories.images(repo:Repository)
 PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.Repositories.putImages(repo:Repository)
 
-GET     /v1/images/:imageId/ancestry    controllers.Images.ancestry(imageId:ImageId)
-GET     /v1/images/:imageId/json        controllers.Images.json(imageId:ImageId)
-PUT     /v1/images/:imageId/json        controllers.Images.putJson(imageId:ImageId)
+GET     /v1/images/:imageId/ancestry    controllers.ImagesController.ancestry(imageId:ImageId)
+GET     /v1/images/:imageId/json        controllers.ImagesController.json(imageId:ImageId)
+PUT     /v1/images/:imageId/json        controllers.ImagesController.putJson(imageId:ImageId)
 
-GET     /v1/images/:imageId/layer       controllers.Images.layer(imageId:ImageId)
+GET     /v1/images/:imageId/layer       controllers.ImagesController.layer(imageId:ImageId)
 
-PUT     /v1/images/:imageId/layer       controllers.Images.putLayer(imageId:ImageId)
-PUT     /v1/images/:imageId/checksum    controllers.Images.putChecksum(imageId:ImageId)
+PUT     /v1/images/:imageId/layer       controllers.ImagesController.putLayer(imageId:ImageId)
+PUT     /v1/images/:imageId/checksum    controllers.ImagesController.putChecksum(imageId:ImageId)
 
 
 # Map static resources from the /public folder to the /assets URL path

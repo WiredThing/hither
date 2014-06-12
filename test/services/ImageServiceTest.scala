@@ -1,0 +1,80 @@
+package services
+
+import java.io.{ByteArrayInputStream, StringReader, StringBufferInputStream}
+
+import models.ImageId
+import org.scalatest.{FlatSpec, Matchers}
+import play.api.LoggerLike
+import play.api.libs.iteratee.{Enumerator, Iteratee}
+import system.{LocalRegistry, LocalSource}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.io.Source
+
+class ImageServiceTest extends FlatSpec with Matchers {
+
+  val dummyLocalSource = new LocalSource {
+    val testString = "test data"
+
+    override def kind: String = "test"
+
+    override def source: Source = ???
+
+    override def asString(): String = ???
+
+    override def length(): Long = testString.length
+
+    override def mkdirs(): LocalSource = ???
+
+    override def getAbsolutePath(): Unit = ???
+
+    override def enumerator(implicit ctx: ExecutionContext): Enumerator[Array[Byte]] = Enumerator.fromStream(new ByteArrayInputStream(testString.getBytes()))
+
+    override def exists(): Boolean = ???
+  }
+
+  val dummyLocalRegistry = new LocalRegistry {
+    override def findLocalSource(imageId: ImageId, extension: String): Option[LocalSource] = imageId match {
+      case ImageId("local")=> Some(dummyLocalSource)
+      case _ => None
+    }
+  }
+
+  object TestImageService extends ImageService {
+    case object testType extends DataType {
+      override def name: String = "test"
+    }
+
+    override def logger: LoggerLike = DummyLogger
+
+    val urlTestString = "url data"
+    override def respondFromUrl(cacheFileName: String, url: String): Future[ContentEnumerator] = {
+      val e = Enumerator.fromStream(new ByteArrayInputStream(urlTestString.getBytes()))
+      Future.successful(ContentEnumerator(e, "test", Some(urlTestString.length)))
+    }
+
+    override def registryHostName: String = ""
+
+    override val localRegistry: LocalRegistry = dummyLocalRegistry
+  }
+
+  "findData" should "return a ContentEnumerator from the local source if it exists" in {
+    val fr = for {
+      ce <- TestImageService.findData(ImageId("local"), TestImageService.testType, "content/type")
+      byteArrays <- ce.content.run(Iteratee.getChunks)
+    } yield byteArrays.map(new String(_)).mkString
+
+    Await.result(fr, 2 seconds) shouldBe dummyLocalSource.testString
+  }
+
+  it should "return a ContentEnumerator from a url if no local source exists" in {
+    val fr = for {
+      ce <- TestImageService.findData(ImageId("url"), TestImageService.testType, "content/type")
+      byteArrays <- ce.content.run(Iteratee.getChunks)
+    } yield byteArrays.map(new String(_)).mkString
+
+    Await.result(fr, 2 seconds) shouldBe TestImageService.urlTestString
+  }
+}

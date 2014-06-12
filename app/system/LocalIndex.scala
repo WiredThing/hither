@@ -17,11 +17,11 @@ trait LocalIndex {
 
   def root = new File(system.Configuration.indexRoot)
 
-  case class ImagesSource(file: File) extends LocalSource {
+  case class ImagesSource(file: File) extends FileLocalSource {
     val kind = "images"
   }
 
-  case class TagSource(file: File, tagName: String) extends LocalSource {
+  case class TagSource(file: File, tagName: String) extends FileLocalSource {
     val kind = tagName
   }
 

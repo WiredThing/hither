@@ -67,21 +67,38 @@ trait ImageService {
 
   val localRegistry: LocalRegistry
 
-  def registryHostName:String
+  def registryHostName: String
 
   import localRegistry.RegistryFile
 
+  trait DataType {
+    def name: String
+  }
+
+  case object JsonType extends DataType {
+    val name = "json"
+  }
+
+  case object LayerType extends DataType {
+    val name = "layer"
+  }
+
+  case object AncestryType extends DataType {
+    val name = "ancestry"
+  }
+
+
   def respondFromUrl(cacheFileName: String, url: String): Future[ContentEnumerator]
 
-  def findData(imageId: ImageId, extension: String, contentType: String = "application/json"): Future[ContentEnumerator] = {
-    val result = localRegistry.findLocalSource(imageId, extension) match {
+  def findData(imageId: ImageId, dataType: DataType, contentType: String = "application/json"): Future[ContentEnumerator] = {
+    val result = localRegistry.findLocalSource(imageId, dataType.name) match {
       case Some(localSource) =>
-        logger.info(s"Supplying $extension for ${imageId.id} from ${localSource.kind}")
-        Future(ContentEnumerator(Enumerator.fromFile(localSource.file), contentType, Some(localSource.length())))
+        logger.info(s"Supplying ${dataType.name} for ${imageId.id} from ${localSource.kind}")
+        Future(ContentEnumerator(localSource.enumerator, contentType, Some(localSource.length())))
 
       case None =>
-        logger.info(s"Going to docker for ${imageId.id}/$extension")
-        respondFromUrl(s"${imageId.id}.$extension", s"http://$registryHostName/v1/images/${imageId.id}/$extension")
+        logger.info(s"Going to docker for ${imageId.id}/${dataType.name}")
+        respondFromUrl(s"${imageId.id}.${dataType.name}", s"http://$registryHostName/v1/images/${imageId.id}/${dataType.name}")
     }
     result
   }
@@ -99,7 +116,7 @@ trait ImageService {
           case JsString(parentId) => buildAncestry(ImageId(parentId)).map(imageId.id +: _)
           case _ => Future(List())
         }
-        case _ => findData(imageId, "ancestry").flatMap { ce =>
+        case _ => findData(imageId, AncestryType).flatMap { ce =>
           val e = ce.content
 
           e.run(Iteratee.getChunks).map { byteArrays =>

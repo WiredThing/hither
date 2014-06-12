@@ -9,14 +9,14 @@ import system.{ProductionLocalRegistry, LocalRegistry}
 import models.ImageId
 import services.{ProductionImageService, ContentEnumerator, ImageService, NotFoundException}
 
-object Images extends Images {
-  override def imageService = ProductionImageService
+object ImagesController extends Images {
+  override lazy val imageService = ProductionImageService
 
   override def localRegistry: LocalRegistry = ProductionLocalRegistry
 }
 
 trait Images extends Controller {
-  def imageService: ImageService
+  val imageService: ImageService
 
   def localRegistry: LocalRegistry
 
@@ -28,13 +28,13 @@ trait Images extends Controller {
   }
 
   def json(imageId: ImageId) = Action.async { implicit request =>
-    imageService.findData(imageId, "json").map(feedContent).recover {
+    imageService.findData(imageId, imageService.JsonType).map(feedContent).recover {
       case NotFoundException(message) => NotFound(JsString(message))
     }
   }
 
   def layer(imageId: ImageId) = Action.async { implicit request =>
-    imageService.findData(imageId, "layer", "binary/octet-stream").map(feedContent).recover {
+    imageService.findData(imageId, imageService.LayerType, "binary/octet-stream").map(feedContent).recover {
       case NotFoundException(message) => NotFound(JsString(message))
     }
   }
