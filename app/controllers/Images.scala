@@ -19,7 +19,7 @@ trait Images extends Controller {
 
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
     Logger.info(s"get ancestry for ${imageId.id}")
-    imageService.buildAncestry(imageId).map { l => Ok(Json.toJson(l))}.recover {
+    imageService.lookupAncestry(imageId).map { l => Ok(Json.toJson(l))}.recover {
       case NotFoundException(message) => NotFound(JsString(message))
     }
   }

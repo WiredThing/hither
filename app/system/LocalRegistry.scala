@@ -7,13 +7,13 @@ import play.api.Logger
 
 object ProductionLocalRegistry extends LocalRegistry
 
-case class RegistryType(name: String)
+case class RegistryType(name: String, contentType:String)
 
 object RegistryType {
-  val AncestryType = RegistryType("ancestry")
-  val JsonType = RegistryType("json")
-  val LayerType = RegistryType("layer")
-  val ChecksumType = RegistryType("checksum")
+  val AncestryType = RegistryType("ancestry", "application/json")
+  val JsonType = RegistryType("json", "application/json")
+  val LayerType = RegistryType("layer","binary/octet-stream")
+  val ChecksumType = RegistryType("checksum", "application/json")
 }
 
 trait LocalRegistry {

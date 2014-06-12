@@ -3,26 +3,24 @@ package services
 
 import java.io.File
 
-import scala.annotation.tailrec
-import scala.concurrent.Future
-import scala.util.Try
-
-import play.api.libs.iteratee.{Iteratee, Enumerator}
+import models.ImageId
 import play.api.LoggerLike
-
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-
-import models.ImageId
-import system._
+import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsString, Json}
+import system._
+
+import scala.concurrent.Future
+import scala.util.Try
 
 case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: String, contentLength: Option[Long])
 
 object ProductionImageService extends ImageService {
 
-  import play.api.libs.ws.WS
   import java.io.{File, FileOutputStream}
+
+import play.api.libs.ws.WS
 
   override def registryHostName = Configuration.registryHostName
 
@@ -73,9 +71,9 @@ trait ImageService {
   def registryHostName: String
 
   import localRegistry.RegistryFile
-  import RegistryType._
+  import system.RegistryType._
 
-  def respondFromUrl(cacheFileName: String, url: String): Future[ContentEnumerator]
+  protected def respondFromUrl(cacheFileName: String, url: String): Future[ContentEnumerator]
 
   def fileFor(imageId: ImageId, dataType: RegistryType): File = localRegistry.buildRegistryPath(s"${imageId.id}.${dataType.name}").file
 
@@ -92,33 +90,33 @@ trait ImageService {
     result
   }
 
-  def buildAncestry(imageId: ImageId): Future[List[String]] = {
+  type Ancestry = List[String]
+
+  def lookupAncestry(imageId: ImageId): Future[Ancestry] = {
     logger.info(s"Building ancestry for ${imageId.id}")
 
     localRegistry.findLocalSource(imageId, AncestryType) match {
-      case Some(localAncestry) => serviceAncestryFromLocal(localAncestry)
-
-      case None => constructAncestry(imageId)
+      case Some(localAncestry) => serveAncestryFromLocal(localAncestry)
+      case None => constructAncestry(imageId, lookupAncestry)
     }
   }
 
-  def serviceAncestryFromLocal(localAncestry: LocalSource): Future[List[String]] = {
+  private[services] def serveAncestryFromLocal(localAncestry: LocalSource): Future[Ancestry] = {
     logger.info(s"Serving ancestry from ${localAncestry.getAbsolutePath()}")
-    Future(Json.parse(localAncestry.source.mkString).as[List[String]])
-
+    Future(Json.parse(localAncestry.source.mkString).as[Ancestry])
   }
 
-  def constructAncestry(imageId: ImageId): Future[List[String]] = {
+  private[services] def constructAncestry(imageId: ImageId, ancestryFinder:ImageId => Future[Ancestry]): Future[Ancestry] = {
     localRegistry.findLocalSource(imageId, JsonType) match {
       case Some(r: RegistryFile) => Json.parse(r.source.mkString) \ "parent" match {
-        case JsString(parentId) => buildAncestry(ImageId(parentId)).map(imageId.id +: _)
-        case _ => Future(List())
+        case JsString(parentId) => ancestryFinder(ImageId(parentId)).map(imageId.id +: _)
+        case _ => Future(List(imageId.id))
       }
 
       case _ => findData(imageId, AncestryType).flatMap { ce =>
         ce.content.run(Iteratee.getChunks).map { byteArrays =>
           val s = byteArrays.map(new String(_)).mkString
-          Json.parse(s).as[List[String]]
+          Json.parse(s).as[Ancestry]
         }
       }
     }
