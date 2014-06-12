@@ -1,26 +1,28 @@
 package controllers
 
-import scala.concurrent.Future
-
+import models.Repository
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsString, Json}
 import play.api.mvc.{Action, Controller}
-
-import models.Repository
 import services.TagService
-import system.LocalIndex
+import system.{LocalIndex, ProductionLocalIndex}
+
+import scala.concurrent.Future
 
 object Tags extends Tags {
   lazy val tagService = TagService
+  lazy val localIndex = ProductionLocalIndex
 }
 
 trait Tags extends Controller {
 
-  def tagService : TagService
+  def tagService: TagService
+
+  def localIndex: LocalIndex
 
   def tags(repo: Repository) = Action.async { implicit request =>
-    val tagsDir = LocalIndex.buildTagsDir(repo)
+    val tagsDir = localIndex.buildTagsDir(repo)
     Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
     if (tagsDir.exists()) {
       TagService.feedTagsFromLocal(tagsDir).map(tags => Ok(Json.toJson(tags)))

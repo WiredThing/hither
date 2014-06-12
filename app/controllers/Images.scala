@@ -5,14 +5,14 @@ import play.api.Logger
 import play.api.mvc.{Result, Action, Controller}
 import play.api.libs.json.{Json, JsString}
 
-import system.LocalRegistry
+import system.{ProductionLocalRegistry, LocalRegistry}
 import models.ImageId
-import services.{ContentEnumerator, ImageService, NotFoundException}
+import services.{ProductionImageService, ContentEnumerator, ImageService, NotFoundException}
 
 object Images extends Images {
-  override def imageService = ImageService
+  override def imageService = ProductionImageService
 
-  override def localRegistry: LocalRegistry = LocalRegistry
+  override def localRegistry: LocalRegistry = ProductionLocalRegistry
 }
 
 trait Images extends Controller {

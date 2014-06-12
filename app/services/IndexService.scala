@@ -8,7 +8,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.{Image, Repository}
 import system.Configuration
 
-object IndexService extends IndexService {
+object ProductionIndexService extends IndexService {
   override def indexHostName: String = Configuration.indexHostName
 }
 

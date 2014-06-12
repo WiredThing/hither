@@ -11,12 +11,12 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 
 import models.ImageId
-import system.{Configuration, LocalRegistry}
+import system.{ProductionLocalRegistry, Configuration, LocalRegistry}
 import play.api.libs.json.{JsString, Json}
 
 case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: String, contentLength: Option[Long])
 
-object ImageService extends ImageService {
+object ProductionImageService extends ImageService {
 
   import play.api.libs.ws.WS
   import java.io.{File, FileOutputStream}
@@ -25,7 +25,7 @@ object ImageService extends ImageService {
 
   override def logger: LoggerLike = play.api.Logger
 
-  override val localRegistry: LocalRegistry = LocalRegistry
+  override val localRegistry: LocalRegistry = ProductionLocalRegistry
 
   object AsLong {
     def unapply(s: String): Option[Long] = Try(s.toLong).toOption

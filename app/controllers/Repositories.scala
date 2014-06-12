@@ -8,18 +8,18 @@ import play.api.libs.json.{JsString, Json, JsError, JsSuccess}
 import play.api.LoggerLike
 import play.api.mvc.Result
 
-import services.IndexService.ImageResult
+import services.ProductionIndexService.ImageResult
 import models.Repository
-import system.LocalIndex
+import system.{ProductionLocalIndex, LocalIndex}
 import services._
 
 object Repositories extends Repositories {
 
-  override def localIndex: LocalIndex = LocalIndex
+  override def localIndex: LocalIndex = ProductionLocalIndex
 
   override def logger: LoggerLike = play.api.Logger
 
-  override def indexService: IndexService = IndexService
+  override def indexService: IndexService = ProductionIndexService
 }
 
 trait Repositories extends Controller {
@@ -39,7 +39,7 @@ trait Repositories extends Controller {
   def putImages(repo: Repository) = {
     localIndex.createRepoDir(repo)
 
-    Action(parse.file(LocalIndex.buildImagesPath(repo).file)) { implicit request =>
+    Action(parse.file(localIndex.buildImagesPath(repo).file)) { implicit request =>
       logger.info("putImagesNoNamespace")
       NoContent
     }

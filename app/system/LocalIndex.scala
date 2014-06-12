@@ -4,7 +4,7 @@ import models.Repository
 import java.io.File
 import play.api.Logger
 
-object LocalIndex extends LocalIndex
+object ProductionLocalIndex extends LocalIndex
 
 trait LocalIndex {
 

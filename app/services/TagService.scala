@@ -10,15 +10,19 @@ import play.api.libs.json.JsValue
 import java.io.{FileOutputStream, FileFilter, File}
 import scala.io.Source
 import play.api.Logger
-import system.{Configuration, LocalIndex}
+import system.{ProductionLocalIndex, Configuration, LocalIndex}
 
 object TagService extends TagService {
   override def registryHostName: String = Configuration.registryHostName
+
+  override def localIndex = ProductionLocalIndex
 }
 
 trait TagService {
 
   def registryHostName: String
+
+  def localIndex: LocalIndex
 
   def getTag(repo: Repository, tagName: String): Future[JsValue] = {
     WS.url(s"http://$registryHostName/v1/repositories/${repo.qualifiedName}/tags/$tagName").get().map {
@@ -46,7 +50,7 @@ trait TagService {
 
   def writeTagsfile(repository: Repository, tagName: String, tagValue: String): Future[Unit] = Future {
     Logger.info(s"tag value is $tagValue")
-    val tagsDir = LocalIndex.buildTagsDir(repository)
+    val tagsDir = localIndex.buildTagsDir(repository)
     tagsDir.mkdirs()
     val fos = new FileOutputStream(new File(tagsDir, tagName))
     fos.write(tagValue.getBytes)
