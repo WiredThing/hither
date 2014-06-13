@@ -1,33 +1,11 @@
 package system
 
-import java.io.File
-
 import models.ImageId
-import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.{JsString, Json}
 import services.ContentEnumerator
 import system.ResourceType._
 
 import scala.concurrent.{ExecutionContext, Future}
-
-object FileBasedPrivateRegistry extends PrivateRegistry {
-  def registryRoot: File = new File(system.Configuration.registryRoot)
-
-  case class RegistryFile(file: File) extends FileLocalSource
-
-  override def ancestryBuilder: AncestryBuilder = ProductionAncestryBuilder
-
-  def localSourceFor(name: String): Option[LocalSource] = RegistryFile(new File(registryRoot, name)).existing
-
-  override def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    val ce = localSourceFor(s"${imageId.id}.${resourceType.name}") match {
-      case Some(source) => Some(ContentEnumerator(source.enumerator, resourceType.contentType, Some(source.length())))
-      case None => None
-    }
-
-    Future.successful(ce)
-  }
-}
 
 trait PrivateRegistry extends Registry {
   def ancestryBuilder: AncestryBuilder
@@ -42,10 +20,6 @@ trait PrivateRegistry extends Registry {
       }
     }
   }
-
-  override def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit]): Unit = ???
-
-  override def putJson(id: ImageId, json: ImageJson): Future[Unit] = ???
 }
 
 object ProductionAncestryBuilder extends AncestryBuilder
@@ -64,13 +38,8 @@ trait AncestryBuilder {
   }
 
   def prependImageId(imageId: ImageId, ce: ContentEnumerator)(implicit ctx: ExecutionContext): Future[ContentEnumerator] = {
-    val ancestry = ce.content.run(Iteratee.getChunks).map { byteArrays =>
-      val s = byteArrays.map(new String(_)).mkString
-      Json.parse(s).as[Ancestry]
-    }
-
-    ancestry map { a =>
-      ContentEnumerator(Json.toJson(imageId +: a))
-    }
+    for {
+      ancestry <- ce.parseJson[Ancestry]
+    } yield ContentEnumerator(Json.toJson(imageId +: ancestry))
   }
 }
