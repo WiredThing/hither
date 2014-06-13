@@ -7,14 +7,6 @@ import play.api.Logger
 
 object ProductionLocalRegistry extends LocalRegistry
 
-case class ResourceType(name: String, contentType:String)
-
-object ResourceType {
-  val AncestryType = ResourceType("ancestry", "application/json")
-  val JsonType = ResourceType("json", "application/json")
-  val LayerType = ResourceType("layer","binary/octet-stream")
-  val ChecksumType = ResourceType("checksum", "application/json")
-}
 
 trait LocalRegistry {
 

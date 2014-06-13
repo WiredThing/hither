@@ -10,7 +10,7 @@ import system.ResourceType._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object FileBasedPrivateRegsitry extends PrivateRegistry {
+object FileBasedPrivateRegistry extends PrivateRegistry {
   def registryRoot: File = new File(system.Configuration.registryRoot)
 
   case class RegistryFile(file: File) extends FileLocalSource
@@ -30,30 +30,16 @@ object FileBasedPrivateRegsitry extends PrivateRegistry {
 }
 
 trait PrivateRegistry extends Registry {
-
   def ancestryBuilder: AncestryBuilder
-
-  def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
-
-  override def layer(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    findResource(imageId, LayerType)
-  }
-
-  override def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    findResource(imageId, JsonType)
-  }
 
   override def ancestry(imageId: ImageId)(implicit fallback: AncestryFinder, ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     findResource(imageId, AncestryType) flatMap {
       case Some(ce) => Future(Some(ce))
-      case None => constructAncestry(imageId)
-    }
-  }
 
-  def constructAncestry(imageId: ImageId)(implicit fallback: AncestryFinder, ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    findResource(imageId, JsonType) flatMap {
-      case Some(jsonContent) => ancestryBuilder.buildAncestry(imageId, jsonContent)
-      case None => Future.successful(None)
+      case None => findResource(imageId, JsonType) flatMap {
+        case Some(jsonContent) => ancestryBuilder.buildAncestry(imageId, jsonContent)
+        case None => Future.successful(None)
+      }
     }
   }
 

@@ -11,15 +11,28 @@ trait AncestryFinder {
   def ancestry(imageId: ImageId)(implicit fallback: AncestryFinder, ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 }
 
+case class ResourceType(name: String, contentType: String)
+
+object ResourceType {
+  val AncestryType = ResourceType("ancestry", "application/json")
+  val JsonType = ResourceType("json", "application/json")
+  val LayerType = ResourceType("layer", "binary/octet-stream")
+  val ChecksumType = ResourceType("checksum", "application/json")
+}
+
+
 trait Registry extends AncestryFinder {
   type Ancestry = List[ImageId]
 
   type ImageJson = JsValue
 
-  def layer(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
+  import ResourceType._
 
-  def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
+  def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 
+  def layer(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, LayerType)
+
+  def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, JsonType)
 
   def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit])
 
