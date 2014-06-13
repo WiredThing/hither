@@ -1,20 +1,22 @@
 package system
 
-import models.{Image, ImageId}
-import play.api.libs.iteratee.{Iteratee, Enumerator}
+import models.ImageId
+import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
 import services.ContentEnumerator
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait Registry {
+trait AncestryFinder {
+  def ancestry(imageId: ImageId)(implicit fallback: AncestryFinder, ctx: ExecutionContext): Future[Option[ContentEnumerator]]
+}
+
+trait Registry extends AncestryFinder {
   type Ancestry = List[ImageId]
 
   type ImageJson = JsValue
 
   def layer(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
-
-  def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 
   def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 

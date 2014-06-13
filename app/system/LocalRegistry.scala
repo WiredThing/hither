@@ -7,18 +7,18 @@ import play.api.Logger
 
 object ProductionLocalRegistry extends LocalRegistry
 
-case class RegistryType(name: String, contentType:String)
+case class ResourceType(name: String, contentType:String)
 
-object RegistryType {
-  val AncestryType = RegistryType("ancestry", "application/json")
-  val JsonType = RegistryType("json", "application/json")
-  val LayerType = RegistryType("layer","binary/octet-stream")
-  val ChecksumType = RegistryType("checksum", "application/json")
+object ResourceType {
+  val AncestryType = ResourceType("ancestry", "application/json")
+  val JsonType = ResourceType("json", "application/json")
+  val LayerType = ResourceType("layer","binary/octet-stream")
+  val ChecksumType = ResourceType("checksum", "application/json")
 }
 
 trait LocalRegistry {
 
-  def findLocalSource(imageId: ImageId, dataType: RegistryType): Option[LocalSource] = {
+  def findLocalSource(imageId: ImageId, dataType: ResourceType): Option[LocalSource] = {
     List(
       buildRegistryPath(s"${imageId.id}.${dataType.name}").existing,
       buildCachePath(s"${imageId.id}.${dataType.name}").existing

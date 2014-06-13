@@ -50,7 +50,7 @@ trait RegistryService {
   }
 
   def json(imageId: ImageId): Future[ServiceResult[LayerDescriptor]] = {
-    localRegistry.findLocalSource(imageId, RegistryType.JsonType) match {
+    localRegistry.findLocalSource(imageId, ResourceType.JsonType) match {
       case Some(localSource) => Logger.info(s"Serving json from local file ${localSource.getAbsolutePath}")
         processJsonFile(localSource)
 

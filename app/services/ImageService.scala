@@ -1,26 +1,39 @@
 package services
 
 
-import java.io.File
+import java.io.{ByteArrayInputStream, File}
 
 import models.ImageId
 import play.api.LoggerLike
 import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.{JsValue, JsString, Json}
 import system._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: String, contentLength: Option[Long])
+case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: String, contentLength: Option[Long]) {
+  def asString(implicit ctx: ExecutionContext): Future[String] =
+    content.run(Iteratee.getChunks).map(_.map(new String(_)).mkString)
+}
+
+object ContentEnumerator {
+  def apply(js: JsValue)(implicit ctx:ExecutionContext): ContentEnumerator = {
+    val bytes = Json.stringify(js).getBytes()
+    val e = Enumerator.fromStream(new ByteArrayInputStream(bytes))
+
+    ContentEnumerator(e, "application/json", Some(bytes.length))
+  }
+}
 
 object ProductionImageService extends ImageService {
 
   import java.io.{File, FileOutputStream}
 
-import play.api.libs.ws.WS
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  import play.api.libs.ws.WS
 
   override def registryHostName = Configuration.registryHostName
 
@@ -32,7 +45,7 @@ import play.api.libs.ws.WS
     def unapply(s: String): Option[Long] = Try(s.toLong).toOption
   }
 
-  def teeToFile(file: File)(e: Enumerator[Array[Byte]]): Enumerator[Array[Byte]] = {
+  def teeToFile(file: File)(e: Enumerator[Array[Byte]])(implicit ctx:ExecutionContext): Enumerator[Array[Byte]] = {
     val os = new FileOutputStream(file)
     val fileWriter: Enumerator[Array[Byte]] = e.map { bytes =>
       os.write(bytes)
@@ -71,13 +84,15 @@ trait ImageService {
   def registryHostName: String
 
   import localRegistry.RegistryFile
-  import system.RegistryType._
+  import system.ResourceType._
+
+  import scala.concurrent.ExecutionContext.Implicits._
 
   protected def respondFromUrl(cacheFileName: String, url: String): Future[ContentEnumerator]
 
-  def fileFor(imageId: ImageId, dataType: RegistryType): File = localRegistry.buildRegistryPath(s"${imageId.id}.${dataType.name}").file
+  def fileFor(imageId: ImageId, dataType: ResourceType): File = localRegistry.buildRegistryPath(s"${imageId.id}.${dataType.name}").file
 
-  def findData(imageId: ImageId, dataType: RegistryType, contentType: String = "application/json"): Future[ContentEnumerator] = {
+  def findData(imageId: ImageId, dataType: ResourceType, contentType: String = "application/json")(implicit ctx:ExecutionContext): Future[ContentEnumerator] = {
     val result = localRegistry.findLocalSource(imageId, dataType) match {
       case Some(localSource) =>
         logger.info(s"Supplying ${dataType.name} for ${imageId.id} from ${localSource}")
@@ -101,12 +116,12 @@ trait ImageService {
     }
   }
 
-  private[services] def serveAncestryFromLocal(localAncestry: LocalSource): Future[Ancestry] = {
+  private[services] def serveAncestryFromLocal(localAncestry: LocalSource)(implicit ctx:ExecutionContext): Future[Ancestry] = {
     logger.info(s"Serving ancestry from ${localAncestry.getAbsolutePath()}")
     Future(Json.parse(localAncestry.source.mkString).as[Ancestry])
   }
 
-  private[services] def constructAncestry(imageId: ImageId, ancestryFinder:ImageId => Future[Ancestry]): Future[Ancestry] = {
+  private[services] def constructAncestry(imageId: ImageId, ancestryFinder: ImageId => Future[Ancestry]): Future[Ancestry] = {
     localRegistry.findLocalSource(imageId, JsonType) match {
       case Some(r: RegistryFile) => Json.parse(r.source.mkString) \ "parent" match {
         case JsString(parentId) => ancestryFinder(ImageId(parentId)).map(imageId.id +: _)
