@@ -6,7 +6,6 @@ import services.{NotFoundException, ContentEnumerator}
 import play.api.libs.ws.WS
 import scala.util.Try
 import play.api.Play.current
-import system.{ResourceType, Registry}
 
 trait DockerRegistry extends Registry {
   def registryHostName: String

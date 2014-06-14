@@ -7,7 +7,6 @@ import services.ContentEnumerator
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 case class ResourceType(name: String, contentType: String)
 
 object ResourceType {
@@ -33,7 +32,7 @@ trait Registry {
 
   def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, AncestryType)
 
-  def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit])
+  def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit]) = ???
 
-  def putJson(id: ImageId, json: ImageJson): Future[Unit]
+  def putJson(id: ImageId, json: ImageJson): Future[Unit] = ???
 }

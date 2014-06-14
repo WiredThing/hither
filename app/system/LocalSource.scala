@@ -1,6 +1,6 @@
 package system
 
-import java.io.File
+import java.io.{OutputStream, FileOutputStream, File}
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.ExecutionContext
@@ -11,6 +11,8 @@ trait LocalSource {
   def source: Source
 
   def enumerator(implicit ctx: ExecutionContext): Enumerator[Array[Byte]]
+
+  def outputStream: OutputStream = ???
 
   def mkdirs(): LocalSource
 
@@ -33,8 +35,14 @@ trait FileLocalSource extends LocalSource {
 
   override def source: Source = Source.fromFile(file)
 
+
+  override def outputStream: OutputStream = {
+    file.mkdirs()
+    new FileOutputStream(file)
+  }
+
   override def mkdirs(): LocalSource = {
-    file.mkdirs();
+    file.mkdirs()
     this
   }
 

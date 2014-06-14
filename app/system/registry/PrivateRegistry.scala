@@ -14,6 +14,8 @@ trait PrivateRegistry extends Registry {
     def next = outer.next
   }
 
+  import ResourceType._
+
   override def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     findResource(imageId, AncestryType) flatMap {
       case Some(ce) => Future(Some(ce))
