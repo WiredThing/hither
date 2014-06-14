@@ -12,6 +12,7 @@ import system._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import system.registry.ResourceType
 
 case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: String, contentLength: Option[Long]) {
   def asString(implicit ctx: ExecutionContext): Future[String] =
@@ -88,7 +89,7 @@ trait ImageService {
   def registryHostName: String
 
   import localRegistry.RegistryFile
-  import system.ResourceType._
+  import ResourceType._
 
   import scala.concurrent.ExecutionContext.Implicits._
 

@@ -10,6 +10,7 @@ import play.api.libs.ws.WS
 
 import models._
 import system._
+import system.registry.ResourceType
 
 trait ServiceResult[T]
 

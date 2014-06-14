@@ -6,7 +6,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsString, Json}
 import play.api.mvc.{Action, Controller, Result}
 import services.{ContentEnumerator, ImageService, NotFoundException, ProductionImageService}
-import system.ResourceType
+import system.registry.ResourceType
 
 object ImagesController extends Images {
   override lazy val imageService = ProductionImageService

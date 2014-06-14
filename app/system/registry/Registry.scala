@@ -1,4 +1,4 @@
-package system
+package system.registry
 
 import models.ImageId
 import play.api.libs.iteratee.Iteratee
@@ -7,9 +7,6 @@ import services.ContentEnumerator
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AncestryFinder {
-  def ancestry(imageId: ImageId)(implicit fallback: AncestryFinder, ctx: ExecutionContext): Future[Option[ContentEnumerator]]
-}
 
 case class ResourceType(name: String, contentType: String)
 
@@ -21,7 +18,7 @@ object ResourceType {
 }
 
 
-trait Registry extends AncestryFinder {
+trait Registry {
   type Ancestry = List[ImageId]
 
   type ImageJson = JsValue
@@ -33,6 +30,8 @@ trait Registry extends AncestryFinder {
   def layer(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, LayerType)
 
   def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, JsonType)
+
+  def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, AncestryType)
 
   def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit])
 

@@ -1,4 +1,4 @@
-package system
+package system.registry
 
 import java.io.File
 
@@ -8,13 +8,13 @@ import services.ContentEnumerator
 import models.ImageId
 
 import scala.concurrent.{ExecutionContext, Future}
+import system._
+import scala.Some
 
-object FileBasedPrivateRegistry extends PrivateRegistry {
+final class FileBasedPrivateRegistry(val next: Registry) extends PrivateRegistry {
   def registryRoot: File = new File(system.Configuration.registryRoot)
 
   case class RegistryFile(file: File) extends FileLocalSource
-
-  override def ancestryBuilder: AncestryBuilder = ProductionAncestryBuilder
 
   def localSourceFor(name: String): Option[LocalSource] = RegistryFile(new File(registryRoot, name)).existing
 

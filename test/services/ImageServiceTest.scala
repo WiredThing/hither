@@ -6,12 +6,13 @@ import models.ImageId
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.LoggerLike
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import system.{ResourceType, LocalRegistry, LocalSource}
+import system.{LocalRegistry, LocalSource}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.io.Source
+import system.registry.ResourceType
 
 class ImageServiceTest extends FlatSpec with Matchers {
   "findData" should "return a ContentEnumerator from the local source if it exists" in {

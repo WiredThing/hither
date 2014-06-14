@@ -4,6 +4,7 @@ import java.io.File
 
 import models.ImageId
 import play.api.Logger
+import system.registry.ResourceType
 
 object ProductionLocalRegistry extends LocalRegistry
 
