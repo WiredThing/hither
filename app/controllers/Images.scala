@@ -3,24 +3,33 @@ package controllers
 import models.ImageId
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsString, Json}
-import play.api.mvc.{Action, Controller, Result}
-import services.{ContentEnumerator, ImageService, NotFoundException, ProductionImageService}
-import system.registry.ResourceType
+import play.api.mvc.{Action, Controller}
+import services._
+import system.registry.{Registry, ResourceType}
+import org.apache.http.conn.routing.RouteInfo
+import play.api.mvc.Result
+import play.api.libs.json.JsString
+import services.NotFoundException
+import scala.Some
 
 object ImagesController extends Images {
   override lazy val imageService = ProductionImageService
+
+  override def registry = ProductionRegistry
 }
 
 trait Images extends Controller {
   val imageService: ImageService
 
-  import ResourceType.{ChecksumType, JsonType, LayerType}
+  def registry: Registry
+
+  import ResourceType._
 
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
     Logger.info(s"get ancestry for ${imageId.id}")
-    imageService.lookupAncestry(imageId).map { l => Ok(Json.toJson(l))}.recover {
-      case NotFoundException(message) => NotFound(JsString(message))
+    registry.ancestry(imageId).map {
+      case Some(ce) => feedContent(ce)
+      case None => NotFound(s"no ancestry for ${imageId.id}")
     }
   }
 

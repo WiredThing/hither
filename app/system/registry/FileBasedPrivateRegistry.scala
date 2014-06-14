@@ -11,7 +11,9 @@ import scala.concurrent.{ExecutionContext, Future}
 import system._
 import scala.Some
 
-final class FileBasedPrivateRegistry(val next: Registry) extends PrivateRegistry {
+trait FileBasedPrivateRegistry extends PrivateRegistry {
+  def next: Registry
+
   def registryRoot: File = new File(system.Configuration.registryRoot)
 
   case class RegistryFile(file: File) extends FileLocalSource
@@ -27,7 +29,7 @@ final class FileBasedPrivateRegistry(val next: Registry) extends PrivateRegistry
     Future.successful(ce)
   }
 
-  override def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit]): Unit = ???
+  override def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit]): Future[Unit] = ???
 
   override def putJson(id: ImageId, json: ImageJson): Future[Unit] = ???
 }

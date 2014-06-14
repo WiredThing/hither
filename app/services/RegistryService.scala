@@ -10,7 +10,9 @@ import play.api.libs.ws.WS
 
 import models._
 import system._
-import system.registry.ResourceType
+import system.registry._
+import models.LayerDescriptor
+import scala.Some
 
 trait ServiceResult[T]
 
@@ -20,10 +22,22 @@ case class ErrorResult[T](code: Int) extends ServiceResult[T]
 
 case class JsonResult[T](images: JsResult[T], headers: List[(String, String)]) extends ServiceResult[T]
 
+object ProductionRegistry extends FileBasedPrivateRegistry {
+  lazy val next = new FileBasedCacheRegistry {
+    lazy val next = new DockerRegistry {
+      override def registryHostName = Configuration.registryHostName
+    }
+  }
+}
+
+
 object RegistryService extends RegistryService {
   override def registryHostName = Configuration.registryHostName
 
   override lazy val localRegistry = ProductionLocalRegistry
+
+  override lazy val registry = ProductionRegistry
+
 }
 
 trait RegistryService {
@@ -32,6 +46,8 @@ trait RegistryService {
   def registryHostName: String
 
   val localRegistry: LocalRegistry
+
+  def registry: Registry
 
   def ancestry(imageId: ImageId): Future[ServiceResult[List[ImageId]]] = {
     WS.url(s"http://$registryHostName/v1/images/${imageId.id}/ancestry").get().map { response =>
