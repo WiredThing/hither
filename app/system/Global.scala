@@ -1,13 +1,14 @@
 package system
 
-import play.api.{Logger, Application, GlobalSettings}
+import controllers.ProductionRegistry
+import play.api.{Application, GlobalSettings, Logger}
 
 object Global extends GlobalSettings{
   override def onStart(app: Application): Unit = {
     super.onStart(app)
 
     Logger.info("Creating registry and index directories")
-    ProductionLocalRegistry.createDirs
+    ProductionRegistry.init
     ProductionLocalIndex.createDirs
   }
 }

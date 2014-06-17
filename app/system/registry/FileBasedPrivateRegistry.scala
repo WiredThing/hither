@@ -1,35 +1,43 @@
 package system.registry
 
-import java.io.File
+import java.io.{File, OutputStream}
 
-import play.api.libs.iteratee.Iteratee
-
-import services.ContentEnumerator
 import models.ImageId
+import play.api.Logger
+import services.ContentEnumerator
+import system._
 
 import scala.concurrent.{ExecutionContext, Future}
-import system._
-import scala.Some
 
 trait FileBasedPrivateRegistry extends PrivateRegistry {
-  def next: Registry
-
   def registryRoot: File = new File(system.Configuration.registryRoot)
 
   case class RegistryFile(file: File) extends FileLocalSource
 
-  def localSourceFor(name: String): Option[LocalSource] = RegistryFile(new File(registryRoot, name)).existing
+  def init: Unit = {
+    Logger.info(s"Creating $registryRoot")
+    registryRoot.mkdirs()
+  }
+
+  def fileName(imageId: ImageId, resourceType: ResourceType): String =
+    s"${imageId.id}.${resourceType.name}"
+
+  def outputFor(imageId: ImageId, resourceType: ResourceType): LocalSource =
+    RegistryFile(new File(registryRoot, fileName(imageId, resourceType))).mkdirs()
+
+  def localSourceFor(imageId: ImageId, resourceType: ResourceType): Option[LocalSource] = localSourceFor(s"${imageId.id}.${resourceType.name}")
+
+  private def localSourceFor(name: String): Option[LocalSource] = RegistryFile(new File(registryRoot, name)).existing
+
+  def outputStreamFor(id: ImageId, resourceType: ResourceType): OutputStream =
+    outputFor(id, resourceType).outputStream
 
   override def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    val ce = localSourceFor(s"${imageId.id}.${resourceType.name}") match {
+    val ce = localSourceFor(imageId, resourceType) match {
       case Some(source) => Some(ContentEnumerator(source.enumerator, resourceType.contentType, Some(source.length())))
       case None => None
     }
 
     Future.successful(ce)
   }
-
-  override def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit]): Future[Unit] = ???
-
-  override def putJson(id: ImageId, json: ImageJson): Future[Unit] = ???
 }

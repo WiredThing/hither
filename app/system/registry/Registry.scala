@@ -32,7 +32,9 @@ trait Registry {
 
   def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, AncestryType)
 
-  def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit]) :Future[Unit]= ???
+  def sinkFor(id: ImageId, resourceType: ResourceType): Iteratee[Array[Byte], Unit] = ???
+
+  def putLayer(id: ImageId, body: Iteratee[Array[Byte], Unit]): Future[Unit] = ???
 
   def putJson(id: ImageId, json: ImageJson): Future[Unit] = ???
 }
