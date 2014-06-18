@@ -1,8 +1,5 @@
 package services
 
-
-import java.io.ByteArrayInputStream
-
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsValue, Json, Reads}
 
@@ -18,6 +15,8 @@ case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: Stri
 }
 
 object ContentEnumerator {
+  import java.io.ByteArrayInputStream
+
   def apply(js: JsValue)(implicit ctx: ExecutionContext): ContentEnumerator = {
     val bytes = Json.stringify(js).getBytes()
     val e = Enumerator.fromStream(new ByteArrayInputStream(bytes))

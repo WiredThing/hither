@@ -30,9 +30,13 @@ trait Repositories extends Controller {
 
   def logger: LoggerLike
 
-  def images(repo: Repository) = Action.async { implicit request =>
-    getImages(repo).recover {
-      case NotFoundException(message) => NotFound(JsString(message))
+  def images(repo: Repository) = Action { implicit request =>
+    val indexFile = localIndex.buildImagesPath(repo)
+
+    if (indexFile.exists()) {
+      Ok.sendFile(indexFile.file)
+    } else {
+      NotFound(s"${repo.qualifiedName}")
     }
   }
 
@@ -51,18 +55,5 @@ trait Repositories extends Controller {
       ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
       ("X-Docker-Endpoints", request.headers("Host"))
     )
-  }
-
-  private def getImages(repo: Repository): Future[Result] = {
-    val indexFile = localIndex.buildImagesPath(repo)
-
-    if (indexFile.exists()) {
-      Future(Ok.sendFile(indexFile.file))
-    } else {
-      indexService.getImages(repo).map {
-        case ImageResult(JsError(errs), _) => BadGateway(errs.toString())
-        case ImageResult(JsSuccess(images, _), headers) => Ok(Json.toJson(images)).withHeaders(headers: _*)
-      }
-    }
   }
 }
