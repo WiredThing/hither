@@ -3,23 +3,21 @@ package controllers
 import models.Repository
 import play.api.LoggerLike
 import play.api.mvc.{Action, Controller}
-import services._
-import system.{LocalIndex, ProductionLocalIndex}
+import system.{Index, LocalIndex, ProductionLocalIndex}
 
 object IndexController extends IndexController {
 
-  override def localIndex: LocalIndex = ProductionLocalIndex
+  override lazy val localIndex: LocalIndex = ProductionLocalIndex
 
-  override def logger: LoggerLike = play.api.Logger
+  override lazy val logger: LoggerLike = play.api.Logger
 
-  override def indexService: IndexService = ProductionIndexService
+  override lazy val index = ???
 }
 
 trait IndexController extends Controller {
-
   def localIndex: LocalIndex
 
-  def indexService: IndexService
+  def index:Index
 
   def logger: LoggerLike
 
@@ -43,7 +41,7 @@ trait IndexController extends Controller {
   }
 
   def allocateRepo(repo: Repository) = Action(parse.json) { request =>
-    indexService.allocateRepo(repo)
+    localIndex.createRepoDir(repo)
     Ok.withHeaders(
       ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
       ("X-Docker-Endpoints", request.headers("Host"))

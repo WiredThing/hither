@@ -16,7 +16,6 @@ object ResourceType {
   val ChecksumType = ResourceType("checksum", "application/json")
 }
 
-
 trait Registry {
   type Ancestry = List[ImageId]
 
@@ -26,11 +25,14 @@ trait Registry {
 
   def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 
-  def layer(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, LayerType)
+  def layer(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] =
+    findResource(imageId, LayerType)
 
-  def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, JsonType)
+  def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] =
+    findResource(imageId, JsonType)
 
-  def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = findResource(imageId, AncestryType)
+  def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] =
+    findResource(imageId, AncestryType)
 
   def sinkFor(id: ImageId, resourceType: ResourceType): Iteratee[Array[Byte], Unit] = ???
 
