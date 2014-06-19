@@ -6,7 +6,7 @@ import play.api.mvc.{Action, Controller}
 import services._
 import system.{LocalIndex, ProductionLocalIndex}
 
-object Repositories extends Repositories {
+object IndexController extends IndexController {
 
   override def localIndex: LocalIndex = ProductionLocalIndex
 
@@ -15,7 +15,7 @@ object Repositories extends Repositories {
   override def indexService: IndexService = ProductionIndexService
 }
 
-trait Repositories extends Controller {
+trait IndexController extends Controller {
 
   def localIndex: LocalIndex
 

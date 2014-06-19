@@ -13,10 +13,10 @@ GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags                c
 GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.Tags.tagName(repo:Repository, tagName:String)
 PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.Tags.putTagName(repo:Repository, tagName:String)
 
-PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/                    controllers.Repositories.allocateRepo(repo:Repository)
+PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/                    controllers.IndexController.allocateRepo(repo:Repository)
 
-GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.Repositories.images(repo:Repository)
-PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.Repositories.putImages(repo:Repository)
+GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.IndexController.images(repo:Repository)
+PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.IndexController.putImages(repo:Repository)
 
 GET     /v1/images/:imageId/ancestry    controllers.RegistryController.ancestry(imageId:ImageId)
 GET     /v1/images/:imageId/json        controllers.RegistryController.json(imageId:ImageId)
