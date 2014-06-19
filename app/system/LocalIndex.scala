@@ -1,8 +1,8 @@
 package system
 
-import models.Repository
 import java.io.File
 import play.api.Logger
+import models.Repository
 
 object ProductionLocalIndex extends LocalIndex
 
@@ -10,7 +10,7 @@ trait LocalIndex {
 
   def repos: List[Repository] = ???
 
-  def createDirs(): Unit = {
+  def init(): Unit = {
     Logger.info(s"Creating $root")
     root.mkdirs()
   }

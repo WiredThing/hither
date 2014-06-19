@@ -1,17 +1,10 @@
 package controllers
 
-import scala.concurrent.Future
-
-import play.api.mvc.{Action, Controller}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsString, Json, JsError, JsSuccess}
-import play.api.LoggerLike
-import play.api.mvc.Result
-
-import services.ProductionIndexService.ImageResult
 import models.Repository
-import system.{ProductionLocalIndex, LocalIndex}
+import play.api.LoggerLike
+import play.api.mvc.{Action, Controller}
 import services._
+import system.{LocalIndex, ProductionLocalIndex}
 
 object Repositories extends Repositories {
 

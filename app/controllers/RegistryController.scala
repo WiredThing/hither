@@ -10,11 +10,11 @@ import system.registry.{FileBasedPrivateRegistry, Registry, ResourceType}
 
 object ProductionRegistry extends FileBasedPrivateRegistry 
 
-object ImagesController extends Images {
+object RegistryController extends RegistryController {
   override def registry = ProductionRegistry
 }
 
-trait Images extends Controller {
+trait RegistryController extends Controller {
   def registry: Registry
 
   import system.registry.ResourceType._
