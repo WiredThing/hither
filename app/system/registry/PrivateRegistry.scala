@@ -46,7 +46,7 @@ trait PrivateRegistry extends Registry {
 }
 
 trait AncestryBuilder {
-  type Ancestry = List[ImageId]
+  type Ancestry = List[String]
 
   def registry: Registry
 
@@ -56,7 +56,7 @@ trait AncestryBuilder {
         case Some(ce) => prependImageId(imageId, ce).map(Some(_))
         case None => throw new Exception(s"Could not find ancestry for parent $parentId of layer $imageId")
       }
-      case _ => Future(Option(ContentEnumerator(Json.toJson(Array(imageId.id)))))
+      case _ => Future(Option(ContentEnumerator(Json.toJson(List(imageId.id)))))
     }
   }
 
@@ -64,7 +64,7 @@ trait AncestryBuilder {
     try {
       for {
         ancestry <- ce.parseJson[Ancestry]
-      } yield ContentEnumerator(Json.toJson(imageId +: ancestry))
+      } yield ContentEnumerator(Json.toJson(imageId.id +: ancestry))
     } catch {
       case jre: JsResultException => Logger.error(s"Could not parse json into id list", jre); throw jre
     }
