@@ -37,7 +37,6 @@ trait FileLocalSource extends LocalSource {
 
 
   override def outputStream: OutputStream = {
-    file.mkdirs()
     new FileOutputStream(file)
   }
 

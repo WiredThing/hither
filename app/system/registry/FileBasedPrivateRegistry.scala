@@ -23,7 +23,7 @@ trait FileBasedPrivateRegistry extends PrivateRegistry {
     s"${imageId.id}.${resourceType.name}"
 
   def outputFor(imageId: ImageId, resourceType: ResourceType): LocalSource =
-    RegistryFile(new File(registryRoot, fileName(imageId, resourceType))).mkdirs()
+    RegistryFile(new File(registryRoot, fileName(imageId, resourceType)))
 
   def localSourceFor(imageId: ImageId, resourceType: ResourceType): Option[LocalSource] = localSourceFor(s"${imageId.id}.${resourceType.name}")
 
