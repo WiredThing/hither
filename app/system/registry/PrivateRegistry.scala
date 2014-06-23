@@ -3,8 +3,9 @@ package system.registry
 import java.io.OutputStream
 
 import models.ImageId
+import play.api.Logger
 import play.api.libs.iteratee.Iteratee
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.{JsResultException, JsString, Json}
 import services.ContentEnumerator
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,8 +22,12 @@ trait PrivateRegistry extends Registry {
 
   override def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     findResource(imageId, JsonType) flatMap {
-      case Some(jsonContent) => ancestryBuilder.buildAncestry(imageId, jsonContent)
-      case None => Future(None)
+      case Some(jsonContent) =>
+        Logger.info(s"building ancestry for ${imageId.id}")
+        ancestryBuilder.buildAncestry(imageId, jsonContent)
+      case None =>
+        Logger.warn(s"can't find json file for ${imageId.id} whilst building ancestry")
+        Future(None)
     }
   }
 
@@ -56,8 +61,12 @@ trait AncestryBuilder {
   }
 
   def prependImageId(imageId: ImageId, ce: ContentEnumerator)(implicit ctx: ExecutionContext): Future[ContentEnumerator] = {
-    for {
-      ancestry <- ce.parseJson[Ancestry]
-    } yield ContentEnumerator(Json.toJson(imageId +: ancestry))
+    try {
+      for {
+        ancestry <- ce.parseJson[Ancestry]
+      } yield ContentEnumerator(Json.toJson(imageId +: ancestry))
+    } catch {
+      case jre: JsResultException => Logger.error(s"Could not parse json into id list", jre); throw jre
+    }
   }
 }
