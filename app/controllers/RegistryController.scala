@@ -1,17 +1,21 @@
 package controllers
 
+import models.ImageId
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsString
 import play.api.mvc.{Action, BodyParser, Controller, Result}
-
-import models.ImageId
 import services._
 import system.Configuration
 import system.registry.{Registry, ResourceType, S3Registry}
 
-object ProductionRegistry extends S3Registry  {
+object ProductionRegistry extends S3Registry {
+  import fly.play.s3.S3
+
+  override implicit def app = play.api.Play.current
+
   override lazy val bucketName: String = Configuration.s3.bucketName
+  override lazy val s3 = S3.fromConfig
 
   def init {}
 }

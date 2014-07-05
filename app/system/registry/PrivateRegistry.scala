@@ -33,7 +33,7 @@ trait PrivateRegistry extends Registry {
 
   def outputStreamFor(id: ImageId, resourceType: ResourceType): OutputStream
 
-  override def sinkFor(id: ImageId, resourceType: ResourceType): Iteratee[Array[Byte], Unit] = {
+  override def sinkFor(id: ImageId, resourceType: ResourceType)(implicit ctx:ExecutionContext): Iteratee[Array[Byte], Unit] = {
     val os = outputStreamFor(id, resourceType)
     Iteratee.fold[Array[Byte], OutputStream](os) { (os, data) =>
       os.write(data)
