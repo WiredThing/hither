@@ -10,11 +10,13 @@ routesImport += "binders._,  models._"
 
 scalaVersion := "2.11.1"
 
+resolvers += "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local"
 
 libraryDependencies ++= Seq(
   jdbc,
   cache,
   ws,
+  "nl.rhinofly" %% "play-s3" % "5.0.0",
   "org.scalatest" %% "scalatest" % "2.1.7" % "test"
 )
 

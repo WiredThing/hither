@@ -27,12 +27,13 @@ trait Tags extends Controller {
     if (tagsDir.exists()) {
       TagService.feedTagsFromLocal(tagsDir).map(tags => Ok(Json.toJson(tags)))
     } else {
-      TagService.getTags(repo).map(Ok(_))
+      Future(NotFound)
     }
   }
 
   def tagName(repo: Repository, tagName: String) = Action.async { implicit request =>
-    TagService.getTag(repo, tagName).map(Ok(_))
+    //TagService.getTag(repo, tagName).map(Ok(_))
+    Future(NotFound)
   }
 
   def putTagName(repo: Repository, tagName: String) = {

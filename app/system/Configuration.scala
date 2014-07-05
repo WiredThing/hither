@@ -1,9 +1,10 @@
 package system
 
-import play.api.Play
-import Play.current
 import java.io.File
-import models.{Namespace, RepositoryName, Repository}
+
+import models.Repository
+import play.api.Play
+import play.api.Play.current
 
 object Configuration {
 
@@ -11,11 +12,15 @@ object Configuration {
 
   lazy val registryRoot = Play.configuration.getString("registry.root").getOrElse("/tmp/registry")
 
-  lazy val cacheRoot = Play.configuration.getString("registry.cache.root").getOrElse("/tmp/registry-cache")
 
-  lazy val registryHostName = Play.configuration.getString("docker.registry.hostname").get
+  object s3 {
+    lazy val bucketName = Play.configuration.getString("s3.bucketName").get
+    lazy val accessKeyId = Play.configuration.getString("aws.accessKeyId").get
+    lazy val secretKey = Play.configuration.getString("aws.secretKey").get
+    lazy val region = Play.configuration.getString("s3.region").get
+  }
 
-  lazy val indexHostName = Play.configuration.getString("docker.index.hostname").get
+
 
 
   def buildRepoIndexPath(repo: Repository): File = {

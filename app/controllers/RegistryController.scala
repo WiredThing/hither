@@ -1,14 +1,20 @@
 package controllers
 
-import models.ImageId
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsString
 import play.api.mvc.{Action, BodyParser, Controller, Result}
-import services._
-import system.registry.{FileBasedPrivateRegistry, Registry, ResourceType}
 
-object ProductionRegistry extends FileBasedPrivateRegistry 
+import models.ImageId
+import services._
+import system.Configuration
+import system.registry.{Registry, ResourceType, S3Registry}
+
+object ProductionRegistry extends S3Registry  {
+  override lazy val bucketName: String = Configuration.s3.bucketName
+
+  def init {}
+}
 
 object RegistryController extends RegistryController {
   override def registry = ProductionRegistry
