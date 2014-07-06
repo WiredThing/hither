@@ -10,15 +10,15 @@ import play.api.libs.json.JsValue
 import java.io.{FileOutputStream, FileFilter, File}
 import scala.io.Source
 import play.api.Logger
-import system.{ProductionLocalIndex, Configuration, LocalIndex}
+import system.{Index, ProductionIndex, Configuration, LocalIndex}
 
 object TagService extends TagService {
-  override def localIndex = ProductionLocalIndex
+  override def localIndex = ProductionIndex
 }
 
 trait TagService {
 
-  def localIndex: LocalIndex
+  def localIndex: Index
 
   def feedTagsFromLocal(tagsDir: File): Future[Map[String, String]] = Future {
     val filter = new FileFilter {
@@ -33,11 +33,11 @@ trait TagService {
   }
 
   def writeTagsfile(repository: Repository, tagName: String, tagValue: String): Future[Unit] = Future {
-    Logger.info(s"tag value is $tagValue")
-    val tagsDir = localIndex.buildTagsDir(repository)
-    tagsDir.mkdirs()
-    val fos = new FileOutputStream(new File(tagsDir, tagName))
-    fos.write(tagValue.getBytes)
-    fos.close()
+//    Logger.info(s"tag value is $tagValue")
+//    val tagsDir = localIndex.buildTagsDir(repository)
+//    tagsDir.mkdirs()
+//    val fos = new FileOutputStream(new File(tagsDir, tagName))
+//    fos.write(tagValue.getBytes)
+//    fos.close()
   }
 }

@@ -1,13 +1,17 @@
 package system
 
 import models.Repository
+import play.api.libs.iteratee.Iteratee
+import system.registry.ResourceType
 
-object FileBasedIndex extends Index {
-  override  def allocateRepo(repo: Repository): Unit = {
-    Configuration.buildRepoIndexPath(repo)
-  }
+import scala.concurrent.ExecutionContext
+
+
+object IndexType {
+  val ImagesType = ResourceType("images", "application/json")
 }
 
+
 trait Index {
-  def allocateRepo(repo: Repository): Unit
+  def sinkFor(repository: Repository, resourceType: ResourceType, option: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = ???
 }

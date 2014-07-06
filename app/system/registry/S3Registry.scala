@@ -57,7 +57,6 @@ trait S3Registry extends PrivateRegistry {
   override def sinkFor(imageId: ImageId, resourceType: ResourceType, contentLength: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
     import scala.concurrent.Await
 
-
     val bucket = s3.getBucket(bucketName)
     val fileName = s"${Configuration.registryRoot}/${imageId.id}.${resourceType.name}"
     val bucketFile = BucketFile(fileName, resourceType.contentType)

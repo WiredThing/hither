@@ -6,29 +6,31 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsString, Json}
 import play.api.mvc.{Action, Controller}
 import services.TagService
-import system.{LocalIndex, ProductionLocalIndex}
+import system.{Index, LocalIndex, ProductionIndex}
 
 import scala.concurrent.Future
 
 object Tags extends Tags {
   lazy val tagService = TagService
-  lazy val localIndex = ProductionLocalIndex
+  lazy val localIndex = ProductionIndex
 }
 
 trait Tags extends Controller {
 
   def tagService: TagService
 
-  def localIndex: LocalIndex
+  def localIndex: Index
 
   def tags(repo: Repository) = Action.async { implicit request =>
-    val tagsDir = localIndex.buildTagsDir(repo)
-    Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
-    if (tagsDir.exists()) {
-      TagService.feedTagsFromLocal(tagsDir).map(tags => Ok(Json.toJson(tags)))
-    } else {
-      Future(NotFound)
-    }
+//    val tagsDir = localIndex.buildTagsDir(repo)
+//    Logger.info("Tags dir is " + tagsDir.getAbsolutePath)
+//    if (tagsDir.exists()) {
+//      TagService.feedTagsFromLocal(tagsDir).map(tags => Ok(Json.toJson(tags)))
+//    } else {
+//      Future(NotFound)
+//    }
+
+    Future(NotFound)
   }
 
   def tagName(repo: Repository, tagName: String) = Action.async { implicit request =>

@@ -9,6 +9,6 @@ object Global extends GlobalSettings{
 
     Logger.info("Creating registry and index directories")
     ProductionRegistry.init
-    ProductionLocalIndex.init
+    ProductionIndex.init
   }
 }

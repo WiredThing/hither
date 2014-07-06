@@ -1,12 +1,20 @@
 package system
 
 import java.io.File
-import play.api.Logger
+import fly.play.s3.S3
+import play.api.{Application, Logger}
 import models.Repository
 
-object ProductionLocalIndex extends LocalIndex
+object ProductionIndex extends S3Index {
+  import fly.play.s3.S3
+  override def bucketName: String = Configuration.s3.bucketName
 
-trait LocalIndex {
+  override implicit def app: Application = play.api.Play.current
+
+  override lazy val s3: S3 = S3.fromConfig
+}
+
+trait LocalIndex extends Index {
 
   def repos: List[Repository] = ???
 
