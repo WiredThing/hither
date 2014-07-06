@@ -4,6 +4,7 @@ import java.io.{File, OutputStream}
 
 import models.ImageId
 import play.api.Logger
+import play.api.libs.iteratee.Iteratee
 import services.ContentEnumerator
 import system._
 
@@ -28,6 +29,17 @@ trait FileBasedPrivateRegistry extends PrivateRegistry {
   def localSourceFor(imageId: ImageId, resourceType: ResourceType): Option[LocalSource] = localSourceFor(s"${imageId.id}.${resourceType.name}")
 
   private def localSourceFor(name: String): Option[LocalSource] = RegistryFile(new File(registryRoot, name)).existing
+
+  override def sinkFor(id: ImageId, resourceType: ResourceType, contentLength: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
+    val os = outputStreamFor(id, resourceType)
+    Iteratee.fold[Array[Byte], OutputStream](os) { (os, data) =>
+      os.write(data)
+      os
+    }.map { os =>
+      os.close()
+      Right(Unit)
+    }
+  }
 
   def outputStreamFor(id: ImageId, resourceType: ResourceType): OutputStream =
     outputFor(id, resourceType).outputStream

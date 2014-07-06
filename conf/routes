@@ -22,6 +22,7 @@ GET     /v1/images/:imageId/ancestry    controllers.RegistryController.ancestry(
 GET     /v1/images/:imageId/json        controllers.RegistryController.json(imageId:ImageId)
 PUT     /v1/images/:imageId/json        controllers.RegistryController.putJson(imageId:ImageId)
 
+HEAD    /v1/images/:imageId/layer       controllers.RegistryController.layerHead(imageId:ImageId)
 GET     /v1/images/:imageId/layer       controllers.RegistryController.layer(imageId:ImageId)
 
 PUT     /v1/images/:imageId/layer       controllers.RegistryController.putLayer(imageId:ImageId)

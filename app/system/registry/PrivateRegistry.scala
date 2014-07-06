@@ -30,19 +30,6 @@ trait PrivateRegistry extends Registry {
         Future(None)
     }
   }
-
-  def outputStreamFor(id: ImageId, resourceType: ResourceType): OutputStream
-
-  override def sinkFor(id: ImageId, resourceType: ResourceType)(implicit ctx:ExecutionContext): Iteratee[Array[Byte], Unit] = {
-    val os = outputStreamFor(id, resourceType)
-    Iteratee.fold[Array[Byte], OutputStream](os) { (os, data) =>
-      os.write(data)
-      os
-    }.map { os =>
-      os.close()
-      Right(Unit)
-    }
-  }
 }
 
 trait AncestryBuilder {

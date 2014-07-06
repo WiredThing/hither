@@ -9,8 +9,12 @@ import services._
 import system.Configuration
 import system.registry.{Registry, ResourceType, S3Registry}
 
+import scala.util.Try
+
 object ProductionRegistry extends S3Registry {
+
   import fly.play.s3.S3
+
 
   override implicit def app = play.api.Play.current
 
@@ -44,6 +48,13 @@ trait RegistryController extends Controller {
     }
   }
 
+  def layerHead(imageId: ImageId) = Action.async { implicit request =>
+    registry.layerHead(imageId).map {
+      case Some(l) => Ok("").withHeaders("Content-Type" -> "binary/octet-stream", "Content-Length" -> l.toString)
+      case None => NotFound
+    }
+  }
+
   def layer(imageId: ImageId) = Action.async { implicit request =>
     registry.layer(imageId).map {
       case Some(layer) => feedContent(layer)
@@ -68,7 +79,8 @@ trait RegistryController extends Controller {
 
   protected def toRegistry(imageId: ImageId, resourceType: ResourceType, registry: Registry): BodyParser[Unit] =
     BodyParser("to registry") { request =>
-      registry.sinkFor(imageId, resourceType).map { _ => Right(Unit)}
+      val contentLength = request.headers.get("Content-Length").flatMap(s => Try(s.toLong).toOption)
+      registry.sinkFor(imageId, resourceType, contentLength).map { _ => Right(Unit)}
     }
 
 

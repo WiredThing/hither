@@ -25,6 +25,8 @@ trait Registry {
 
   def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 
+  def layerHead(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[Long]]
+
   def layer(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] =
     findResource(imageId, LayerType)
 
@@ -34,5 +36,5 @@ trait Registry {
   def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] =
     findResource(imageId, AncestryType)
 
-  def sinkFor(id: ImageId, resourceType: ResourceType)(implicit ctx:ExecutionContext): Iteratee[Array[Byte], Unit] = ???
+  def sinkFor(id: ImageId, resourceType: ResourceType, contentLength: Option[Long] = None)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = ???
 }
