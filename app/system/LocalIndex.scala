@@ -1,9 +1,9 @@
 package system
 
 import java.io.File
-import fly.play.s3.S3
-import play.api.{Application, Logger}
+
 import models.Repository
+import play.api.{Application, Logger}
 
 object ProductionIndex extends S3Index {
   import fly.play.s3.S3

@@ -1,7 +1,7 @@
 package controllers
 
 import models.Repository
-import play.api.LoggerLike
+import play.api.{Logger, LoggerLike}
 import play.api.mvc.{Action, BodyParser, Controller, Result}
 import services.ContentEnumerator
 import system.registry.ResourceType
@@ -31,7 +31,8 @@ trait IndexController extends Controller {
   }
 
   protected def toIndex(repo: Repository, resourceType: ResourceType, index: Index): BodyParser[Unit] =
-    BodyParser("to registry") { request =>
+    BodyParser("to index") { request =>
+      Logger.info(s"toIndex for ${repo.qualifiedName}")
       val contentLength = request.headers.get("Content-Length").flatMap(s => Try(s.toLong).toOption)
       index.sinkFor(repo, resourceType, contentLength).map { _ => Right(Unit)}
     }
