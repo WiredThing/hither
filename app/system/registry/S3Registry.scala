@@ -1,16 +1,20 @@
 package system.registry
 
-import fly.play.s3.{BucketFile, BucketFilePart, BucketFilePartUploadTicket, S3}
-import models.ImageId
-import play.api.Logger
-import play.api.libs.iteratee._
-import services.ContentEnumerator
-import system.Configuration
 
+
+import scala.language.postfixOps
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
+import play.api.Logger
+import play.api.libs.iteratee._
+
+import fly.play.s3.{BucketFile, BucketFilePart, BucketFilePartUploadTicket, S3}
+
+import services.ContentEnumerator
+import system.Configuration
+import models.ImageId
 
 trait S3Registry extends PrivateRegistry {
   def bucketName: String
@@ -68,12 +72,12 @@ trait S3Registry extends PrivateRegistry {
         case None => Logger.info(s"Don't know how much data to expect")
       }
 
-      def step(partNumber: Int, totalSize: Int, currentChunk: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]])(i: Input[Array[Byte]]): Iteratee[Array[Byte], Unit] = i match {
+      def step(partNumber: Int, totalSize: Int, accumulatedChunks: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]])(i: Input[Array[Byte]]): Iteratee[Array[Byte], Unit] = i match {
         case Input.EOF => {
-          Logger.info(s"Got EOF as part number $partNumber. Total data size is ${totalSize + currentChunk.length}")
+          Logger.info(s"Got EOF as part number $partNumber. Total data size is ${totalSize + accumulatedChunks.length}")
           val f = uploadTickets.flatMap { ts =>
-            Logger.info(s"Pushing final part $partNumber with ${currentChunk.length} bytes")
-            val uploadTicket = bucket.uploadPart(ticket, BucketFilePart(partNumber, currentChunk))
+            Logger.info(s"Pushing final part $partNumber with ${accumulatedChunks.length} bytes")
+            val uploadTicket = bucket.uploadPart(ticket, BucketFilePart(partNumber, accumulatedChunks))
 
             uploadTicket.map { t =>
               Logger.info(s"Completing upload with $t and tickets for ${ts.size + 1} parts")
@@ -91,7 +95,7 @@ trait S3Registry extends PrivateRegistry {
         }
 
         case Input.El(bytes) =>
-          val chunk = currentChunk ++ bytes
+          val chunk = accumulatedChunks ++ bytes
           if (chunk.length >= 5 * 1024 * 1024) {
             Logger.info(s"Got Input for part $partNumber with ${chunk.length} bytes of data. Total so far is ${totalSize + chunk.length}")
 
@@ -109,7 +113,7 @@ trait S3Registry extends PrivateRegistry {
             Cont[Array[Byte], Unit](i => step(partNumber, totalSize, chunk, uploadTickets)(i))
           }
 
-        case Input.Empty => Cont[Array[Byte], Unit](i => step(partNumber, totalSize, currentChunk, uploadTickets)(i))
+        case Input.Empty => Cont[Array[Byte], Unit](i => step(partNumber, totalSize, accumulatedChunks, uploadTickets)(i))
       }
 
       Cont[Array[Byte], Unit](i => step(1, 0, Array(), Future(List()))(i))

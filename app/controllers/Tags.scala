@@ -41,7 +41,7 @@ trait Tags extends Controller {
   def putTagName(repo: Repository, tagName: String) = {
     Action.async(parse.json) { request =>
       request.body match {
-        case JsString(value) => TagService.writeTagsfile(repo, tagName, value).map(_ => Ok(JsString("")))
+        case JsString(value) => localIndex.writeTag(repo, tagName, value).map(_ => Ok(JsString("")))
         case _ => Future.successful(BadRequest)
       }
     }

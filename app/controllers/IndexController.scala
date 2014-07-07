@@ -5,7 +5,7 @@ import play.api.{Logger, LoggerLike}
 import play.api.mvc.{Action, BodyParser, Controller, Result}
 import services.ContentEnumerator
 import system.registry.ResourceType
-import system.{Index, IndexType, ProductionIndex}
+import system.{IndexTypes, Index, ProductionIndex}
 
 import scala.util.Try
 import play.api.libs.concurrent.Execution.Implicits._
@@ -26,16 +26,17 @@ trait IndexController extends Controller {
     NoContent
   }
 
-  def putImages(repo: Repository) = Action(toIndex(repo, IndexType.ImagesType, index)) { request =>
+  def putImages(repo: Repository) = Action(toIndex(repo, IndexTypes.ImagesType, index)) { request =>
     NoContent
   }
 
-  protected def toIndex(repo: Repository, resourceType: ResourceType, index: Index): BodyParser[Unit] =
+  protected def toIndex(repo: Repository, resourceType: ResourceType, index: Index): BodyParser[Unit] = {
     BodyParser("to index") { request =>
       Logger.info(s"toIndex for ${repo.qualifiedName}")
       val contentLength = request.headers.get("Content-Length").flatMap(s => Try(s.toLong).toOption)
       index.sinkFor(repo, resourceType, contentLength).map { _ => Right(Unit)}
     }
+  }
 
   def allocateRepo(repo: Repository) = Action(parse.json) { request =>
     //    index.createRepoDir(repo)

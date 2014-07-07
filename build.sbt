@@ -10,6 +10,8 @@ routesImport += "binders._,  models._"
 
 scalaVersion := "2.11.1"
 
+scalacOptions ++= Seq("-feature")
+
 resolvers += "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local"
 
 libraryDependencies ++= Seq(
