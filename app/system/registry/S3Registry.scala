@@ -24,7 +24,7 @@ trait S3Registry extends PrivateRegistry {
   implicit def app: play.api.Application
 
   override def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    val pathName = s"${Configuration.registryRoot}/${imageId.id}.${resourceType.name}"
+    val pathName = s"${Configuration.s3.registryRoot}/${imageId.id}.${resourceType.name}"
 
     val url: String = httpUrl(bucketName, s3.host, pathName)
 
@@ -48,7 +48,7 @@ trait S3Registry extends PrivateRegistry {
 
   override def layerHead(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[Long]] = {
     val bucket = s3.getBucket(bucketName)
-    val fileName = s"${Configuration.registryRoot}/${imageId.id}.layer"
+    val fileName = s"${Configuration.s3.registryRoot}/${imageId.id}.layer"
     val bucketFile = BucketFile(fileName, ResourceType.LayerType.contentType)
 
     Future {
@@ -62,7 +62,7 @@ trait S3Registry extends PrivateRegistry {
     import scala.concurrent.Await
 
     val bucket = s3.getBucket(bucketName)
-    val fileName = s"${Configuration.registryRoot}/${imageId.id}.${resourceType.name}"
+    val fileName = s"${Configuration.s3.registryRoot}/${imageId.id}.${resourceType.name}"
     val bucketFile = BucketFile(fileName, resourceType.contentType)
 
     val fit = bucket.initiateMultipartUpload(bucketFile).map { ticket =>
@@ -90,6 +90,12 @@ trait S3Registry extends PrivateRegistry {
               }
             }
           }
+          // Contraversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
+          // then the iteratee will happliy consume all the incoming data and buffer it up in memory,
+          // only discarding chunk when they've finished uploading. This could potentially lead
+          // to out-of-memory errors. Blocking creates back-pressure to slow the data coming in, at
+          // the cost of thread starvation if several uploads happen concurrently. Use a different thread
+          // context, perhaps?
           Await.result(f, 10 minutes)
           Done(0, Input.EOF)
         }

@@ -23,7 +23,7 @@ trait LocalIndex extends Index {
     root.mkdirs()
   }
 
-  def root = new File(system.Configuration.indexRoot)
+  def root = new File(system.Configuration.file.indexRoot)
 
   case class ImagesSource(file: File) extends FileLocalSource {
     val kind = "images"

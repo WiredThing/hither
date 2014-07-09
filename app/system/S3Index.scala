@@ -18,7 +18,7 @@ trait S3Index extends Index {
   implicit def app: play.api.Application
 
   override def writeTag(repo: Repository, tagName: String, value: String)(implicit ctx: ExecutionContext): Future[Unit] = {
-    val fileName = s"${Configuration.indexRoot}/${repo.qualifiedName}/tags/$tagName"
+    val fileName = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/$tagName"
     val bucketFile = BucketFile(fileName, "application/json", value.getBytes)
 
     bucket.add(bucketFile)
@@ -29,7 +29,7 @@ trait S3Index extends Index {
 
     Iteratee.consume[Array[Byte]]().map { bytes =>
       Logger.info(s"Consumed ${bytes.length} bytes of data")
-      val fileName = s"${Configuration.indexRoot}/${repo.qualifiedName}/${resourceType.name}"
+      val fileName = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/${resourceType.name}"
       Logger.info(s"Sending to bucketFile with name $fileName")
       val bucketFile = BucketFile(fileName, resourceType.contentType, bytes)
 

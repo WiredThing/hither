@@ -11,7 +11,7 @@ import system._
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FileBasedPrivateRegistry extends PrivateRegistry {
-  def registryRoot: File = new File(system.Configuration.registryRoot)
+  def registryRoot: File = new File(system.Configuration.file.registryRoot)
 
   case class RegistryFile(file: File) extends FileLocalSource
 
