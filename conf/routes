@@ -9,9 +9,9 @@ GET     /v1/_ping                   controllers.StatusController.ping
 
 #DELETE  /v1/repositories/:repository
 
-GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags                controllers.Tags.tags(repo:Repository)
-GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.Tags.tagName(repo:Repository, tagName:String)
-PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.Tags.putTagName(repo:Repository, tagName:String)
+GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags                controllers.IndexController.tags(repo:Repository)
+GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.IndexController.tagName(repo:Repository, tagName:String)
+PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.IndexController.putTagName(repo:Repository, tagName:String)
 
 PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/                    controllers.IndexController.allocateRepo(repo:Repository)
 

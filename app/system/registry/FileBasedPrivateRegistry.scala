@@ -2,13 +2,15 @@ package system.registry
 
 import java.io.{File, OutputStream}
 
-import models.ImageId
+import scala.concurrent.{ExecutionContext, Future}
+
 import play.api.Logger
 import play.api.libs.iteratee.Iteratee
+
+import models.ImageId
 import services.ContentEnumerator
 import system._
 
-import scala.concurrent.{ExecutionContext, Future}
 
 trait FileBasedPrivateRegistry extends PrivateRegistry {
   def registryRoot: File = new File(system.Configuration.file.registryRoot)

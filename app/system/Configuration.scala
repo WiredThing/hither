@@ -19,8 +19,6 @@ object Configuration {
     lazy val registryRoot = Play.configuration.getString("s3.registry.root").getOrElse("registry")
 
     lazy val bucketName = Play.configuration.getString("s3.bucketName").get
-    lazy val accessKeyId = Play.configuration.getString("aws.accessKeyId").get
-    lazy val secretKey = Play.configuration.getString("aws.secretKey").get
     lazy val region = Play.configuration.getString("s3.region").get
   }
 
