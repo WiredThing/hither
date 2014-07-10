@@ -6,7 +6,7 @@ export HITHER_VERSION=`cat version`
 
 echo Building docker image for hither-$HITHER_VERSION
 
-sed -s s/_VERSION_/$HITHER_VERSION/ < Dockerfile.template > Dockerfile
+sed -e s/_VERSION_/$HITHER_VERSION/ < Dockerfile.template > Dockerfile
 
 ./activator dist
 docker build -t wiredthing/hither .
