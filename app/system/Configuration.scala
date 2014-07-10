@@ -17,9 +17,13 @@ object Configuration {
     lazy val registryRoot = Play.configuration.getString("file.registry.root").getOrElse("/tmp/registry")
   }
 
+  object aws {
+    lazy val accessKeyId = Play.configuration.getString("aws.accessKeyId").get
+    lazy val secretKey = Play.configuration.getString("aws.secretKey").get
+  }
+
 
   object s3 {
-
     lazy val indexRoot = Play.configuration.getString("s3.registry.index").getOrElse("index")
 
     lazy val registryRoot = Play.configuration.getString("s3.registry.root").getOrElse("registry")

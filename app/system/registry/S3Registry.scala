@@ -1,20 +1,16 @@
 package system.registry
 
-
-
-import scala.language.postfixOps
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
-
+import fly.play.s3.{BucketFile, S3}
+import models.ImageId
 import play.api.Logger
 import play.api.libs.iteratee._
-
-import fly.play.s3.{BucketFile, BucketFilePart, BucketFilePartUploadTicket, S3}
-
 import services.ContentEnumerator
 import system.Configuration
-import models.ImageId
+
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
+import scala.util._
 
 trait S3Registry extends PrivateRegistry {
   def bucketName: String
@@ -23,7 +19,10 @@ trait S3Registry extends PrivateRegistry {
 
   implicit def app: play.api.Application
 
+  val multipartUploadThreshold: Long = 5 * 1024 * 1024
+
   override def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
+
     val pathName = s"${Configuration.s3.registryRoot}/${imageId.id}.${resourceType.name}"
 
     val url: String = httpUrl(bucketName, s3.host, pathName)
@@ -58,74 +57,43 @@ trait S3Registry extends PrivateRegistry {
     }
   }
 
-  override def sinkFor(imageId: ImageId, resourceType: ResourceType, contentLength: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
-    import scala.concurrent.Await
+  lazy val bucket = s3.getBucket(bucketName)
 
-    val bucket = s3.getBucket(bucketName)
+  override def sinkFor(imageId: ImageId, resourceType: ResourceType, contentLength: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
     val fileName = s"${Configuration.s3.registryRoot}/${imageId.id}.${resourceType.name}"
+
+    contentLength match {
+      case Some(l) if l < multipartUploadThreshold => Logger.info(s"Expecting $l bytes of data"); bucketUpload(fileName, resourceType)
+      case Some(l) => Logger.info(s"Expecting $l bytes of data, uploading as multipart"); Iteratee.flatten(multipartUpload(fileName, resourceType))
+      case None => Logger.info(s"Don't know how much data to expect"); Iteratee.flatten(multipartUpload(fileName, resourceType))
+    }
+  }
+
+  def multipartUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Iteratee[Array[Byte], Unit]] = {
     val bucketFile = BucketFile(fileName, resourceType.contentType)
 
-    val fit = bucket.initiateMultipartUpload(bucketFile).map { ticket =>
+    bucket.initiateMultipartUpload(bucketFile).map { ticket =>
       Logger.info(s"Multipart upload to ${bucketFile.name} started with ticket ${ticket}")
-      contentLength match {
-        case Some(l) => Logger.info(s"Expecting $l bytes of data")
-        case None => Logger.info(s"Don't know how much data to expect")
-      }
 
-      def step(partNumber: Int, totalSize: Int, accumulatedChunks: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]])(i: Input[Array[Byte]]): Iteratee[Array[Byte], Unit] = i match {
-        case Input.EOF => {
-          Logger.info(s"Got EOF as part number $partNumber. Total data size is ${totalSize + accumulatedChunks.length}")
-          val f = uploadTickets.flatMap { ts =>
-            Logger.info(s"Pushing final part $partNumber with ${accumulatedChunks.length} bytes")
-            val uploadTicket = bucket.uploadPart(ticket, BucketFilePart(partNumber, accumulatedChunks))
-
-            uploadTicket.map { t =>
-              Logger.info(s"Completing upload with $t and tickets for ${ts.size + 1} parts")
-              bucket.s3.completeMultipartUpload(bucket.name, ticket, (t +: ts).reverse).onComplete {
-                case Success(response) => response.status match {
-                  case 200 => Logger.info(s"Multipart upload response was ${response.status}")
-                  case x => Logger.info(s"Response to multipart upload completion was $x (${response.body})")
-                }
-                case Failure(ex) => Logger.info("Multipart upload failed", ex)
-              }
-            }
-          }
-          // Contraversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
-          // then the iteratee will happliy consume all the incoming data and buffer it up in memory,
-          // only discarding chunk when they've finished uploading. This could potentially lead
-          // to out-of-memory errors. Blocking creates back-pressure to slow the data coming in, at
-          // the cost of thread starvation if several uploads happen concurrently. Use a different thread
-          // context, perhaps?
-          Await.result(f, 10 minutes)
-          Done(0, Input.EOF)
-        }
-
-        case Input.El(bytes) =>
-          val chunk = accumulatedChunks ++ bytes
-          if (chunk.length >= 5 * 1024 * 1024) {
-            Logger.info(s"Got Input for part $partNumber with ${chunk.length} bytes of data. Total so far is ${totalSize + chunk.length}")
-
-            val f = uploadTickets.flatMap { ts =>
-              Logger.info(s"Pushing part $partNumber with ${chunk.length} bytes. $totalSize bytes uploaded so far")
-              bucket.uploadPart(ticket, BucketFilePart(partNumber, chunk)).map { t =>
-                t +: ts
-              }
-            }
-
-            Await.result(f, 10 minutes)
-
-            Cont[Array[Byte], Unit](i => step(partNumber + 1, totalSize + chunk.length, Array(), f)(i))
-          } else {
-            Cont[Array[Byte], Unit](i => step(partNumber, totalSize, chunk, uploadTickets)(i))
-          }
-
-        case Input.Empty => Cont[Array[Byte], Unit](i => step(partNumber, totalSize, accumulatedChunks, uploadTickets)(i))
-      }
+      val step = S3UploadIteratee(bucket, ticket)
 
       Cont[Array[Byte], Unit](i => step(1, 0, Array(), Future(List()))(i))
+    }.recover {
+      case t => Logger.error("Got error trying to initiate upload", t); throw t
     }
+  }
 
-    Iteratee.flatten(fit)
+  def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
+    Iteratee.consume[Array[Byte]]().map { bytes =>
+      Logger.info(s"Consumed ${bytes.length} bytes of data")
+      Logger.info(s"Sending to bucketFile with name $fileName")
+      val bucketFile = BucketFile(fileName, resourceType.contentType, bytes)
+
+      bucket.add(bucketFile).onComplete {
+        case Success(_) => Logger.debug(s"Successfully uploaded $fileName")
+        case Failure(t) => Logger.debug(s"Upload of $fileName failed with ${t.getMessage}")
+      }
+    }
   }
 
   def httpUrl(bucketName: String, host: String, path: String) = {

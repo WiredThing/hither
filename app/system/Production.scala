@@ -1,7 +1,7 @@
 package system
 
 import models.Repository
-import play.api.Application
+import play.api.{Logger, Application}
 import services.ContentEnumerator
 import system.registry.{Registry, S3Registry}
 
@@ -42,7 +42,14 @@ object Production {
     override implicit def app = play.api.Play.current
 
     override val bucketName: String = Configuration.s3.bucketName
+
     override val s3 = S3.fromConfig
+
+    Logger.debug("Initialising S3 registry")
+    Logger.debug(s"Using aws.accessKeyId ${Configuration.aws.accessKeyId}")
+    Logger.debug(s"Using aws.secretKey ${Configuration.aws.secretKey}")
+    Logger.debug(s"Using region ${Configuration.s3.region}")
+    Logger.debug(s"Using bucket $bucketName")
   }
 
   lazy val registry: Registry = Configuration.storage match {

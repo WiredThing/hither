@@ -72,32 +72,18 @@ trait S3Index extends Index {
   }
 
   override def sinkFor(repo: Repository, resourceType: ResourceType, contentLength: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
-    Logger.info(s"Creating a sink for ${
-      repo.qualifiedName
-    } for resource $resourceType")
-
-    Iteratee.consume[Array[Byte]]().map {
-      bytes =>
-        Logger.info(s"Consumed ${
-          bytes.length
-        } bytes of data")
-        val fileName = s"${
-          Configuration.s3.indexRoot
-        }/${
-          repo.qualifiedName
-        }/${
-          resourceType.name
-        }"
-        Logger.info(s"Sending to bucketFile with name $fileName")
-        val bucketFile = BucketFile(fileName, resourceType.contentType, bytes)
-
-        bucket.add(bucketFile)
-    }
+    Logger.info(s"Creating a sink for ${repo.qualifiedName} for resource $resourceType")
+    val fileName = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/${resourceType.name}"
+    bucketUpload(fileName, resourceType)
   }
 
-  private def bucketFileNameFor(resourceType: ResourceType): String = {
-    resourceType match {
-      case ResourceType("images", _) => "images"
+  def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
+    Iteratee.consume[Array[Byte]]().map { bytes =>
+      Logger.info(s"Consumed ${bytes.length} bytes of data")
+      Logger.info(s"Sending to bucketFile with name $fileName")
+      val bucketFile = BucketFile(fileName, resourceType.contentType, bytes)
+
+      bucket.add(bucketFile)
     }
   }
 }
