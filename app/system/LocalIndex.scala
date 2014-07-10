@@ -6,9 +6,6 @@ import models.Repository
 import play.api.Logger
 
 trait LocalIndex extends Index {
-
-  def repos: List[Repository] = ???
-
   override def init(): Unit = {
     Logger.info(s"Creating $root")
     root.mkdirs()

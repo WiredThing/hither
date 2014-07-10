@@ -1,28 +1,36 @@
 package controllers
 
-import models.ImageId
-import play.api.Logger
+
+import play.api.LoggerLike
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.JsString
-import play.api.mvc.{Action, BodyParser, Controller, Result}
-import services._
-import system.Production
-import system.registry.{Registry, ResourceType}
+import play.api.mvc.Controller
 
 import scala.util.Try
 
 
 object RegistryController extends RegistryController {
+
+  import system.Production
+
   override def registry = Production.registry
+
+  override lazy val logger: LoggerLike = play.api.Logger
 }
 
-trait RegistryController extends Controller {
+trait RegistryController extends Controller with ContentFeeding {
+
+  import models.ImageId
+  import play.api.libs.json.JsString
+  import play.api.mvc.{Action, BodyParser}
+  import system.registry.ResourceType._
+  import system.registry.{Registry, ResourceType}
+
   def registry: Registry
 
-  import system.registry.ResourceType._
+  def logger: LoggerLike
 
   def ancestry(imageId: ImageId) = Action.async { implicit request =>
-    Logger.info(s"get ancestry for ${imageId.id}")
+    logger.debug(s"get ancestry for ${imageId.id}")
     registry.ancestry(imageId).map {
       case Some(ce) => feedContent(ce)
       case None => NotFound(s"no ancestry for ${imageId.id}")
@@ -51,12 +59,12 @@ trait RegistryController extends Controller {
   }
 
   def putJson(imageId: ImageId) = Action(toRegistry(imageId, JsonType, registry)) { request =>
-    Logger.info(s"Layer json for ${imageId.id} pushed to registry")
+    logger.debug(s"Layer json for ${imageId.id} pushed to registry")
     Ok(JsString(""))
   }
 
   def putLayer(imageId: ImageId) = Action(toRegistry(imageId, LayerType, registry)) { request =>
-    Logger.info(s"Layer ${imageId.id} pushed to registry")
+    logger.debug(s"Layer ${imageId.id} pushed to registry")
     Ok(JsString(""))
   }
 
@@ -70,12 +78,4 @@ trait RegistryController extends Controller {
       val contentLength = request.headers.get("Content-Length").flatMap(s => Try(s.toLong).toOption)
       registry.sinkFor(imageId, resourceType, contentLength).map { _ => Right(Unit)}
     }
-
-
-  protected def feedContent(content: ContentEnumerator): Result = {
-    content match {
-      case ContentEnumerator(e, contentType, Some(length)) => Ok.feed(e).as(contentType).withHeaders("Content-Length" -> length.toString)
-      case ContentEnumerator(e, contentType, None) => Ok.chunked(e).as(contentType)
-    }
-  }
 }
