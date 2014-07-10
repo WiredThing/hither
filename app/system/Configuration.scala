@@ -1,11 +1,15 @@
 package system
 
-import play.api.Play
+import play.api.{Logger, Play}
 import play.api.Play.current
 
 object Configuration {
 
-  lazy val storage = Play.configuration.getString("hither.storage").getOrElse("s3")
+  lazy val storage = {
+    val s = Play.configuration.getString("hither.storage").getOrElse("s3")
+    Logger.debug(s"Configuring hither with $s storage")
+    s
+  }
 
   object file {
     lazy val indexRoot = Play.configuration.getString("file.registry.index").getOrElse("/tmp/index")
