@@ -6,14 +6,14 @@ import play.api.{Logger, LoggerLike}
 import play.api.mvc.{Action, BodyParser, Controller, Result}
 import services.ContentEnumerator
 import system.registry.ResourceType
-import system.{IndexTypes, Index, ProductionIndex}
+import system.{Production, IndexTypes, Index}
 
 import scala.concurrent.Future
 import scala.util.Try
 import play.api.libs.concurrent.Execution.Implicits._
 
 object IndexController extends IndexController {
-  override lazy val index: Index = ProductionIndex
+  override lazy val index: Index = Production.index
 
   override lazy val logger: LoggerLike = play.api.Logger
 }

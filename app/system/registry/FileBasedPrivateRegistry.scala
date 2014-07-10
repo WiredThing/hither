@@ -17,7 +17,7 @@ trait FileBasedPrivateRegistry extends PrivateRegistry {
 
   case class RegistryFile(file: File) extends FileLocalSource
 
-  def init: Unit = {
+  override def init(): Unit = {
     Logger.info(s"Creating $registryRoot")
     registryRoot.mkdirs()
   }

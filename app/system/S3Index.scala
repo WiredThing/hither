@@ -100,7 +100,4 @@ trait S3Index extends Index {
       case ResourceType("images", _) => "images"
     }
   }
-
-  def init(): Unit = {
-  }
 }

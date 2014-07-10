@@ -1,6 +1,5 @@
 package system
 
-import controllers.ProductionRegistry
 import play.api.{Application, GlobalSettings, Logger}
 
 object Global extends GlobalSettings{
@@ -8,7 +7,7 @@ object Global extends GlobalSettings{
     super.onStart(app)
 
     Logger.info("Creating registry and index directories")
-    ProductionRegistry.init
-    ProductionIndex.init
+    Production.registry.init()
+    Production.index.init()
   }
 }

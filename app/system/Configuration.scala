@@ -5,10 +5,12 @@ import play.api.Play.current
 
 object Configuration {
 
-  object file {
-    lazy val indexRoot = Play.configuration.getString("registry.index").getOrElse("/tmp/index")
+  lazy val storage = Play.configuration.getString("hither.storage").getOrElse("s3")
 
-    lazy val registryRoot = Play.configuration.getString("registry.root").getOrElse("/tmp/registry")
+  object file {
+    lazy val indexRoot = Play.configuration.getString("file.registry.index").getOrElse("/tmp/index")
+
+    lazy val registryRoot = Play.configuration.getString("file.registry.root").getOrElse("/tmp/registry")
   }
 
 

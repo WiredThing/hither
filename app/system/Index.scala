@@ -18,9 +18,11 @@ trait Index {
 
   def tags(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 
-  def tag(repo:Repository, tagName:String)(implicit ctx: ExecutionContext): Future[Option[String]]
+  def tag(repo: Repository, tagName: String)(implicit ctx: ExecutionContext): Future[Option[String]]
 
   def writeTag(repo: Repository, tagName: String, value: String)(implicit ctx: ExecutionContext): Future[Unit]
 
   def sinkFor(repository: Repository, resourceType: ResourceType, option: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = ???
+
+  def init(): Unit = {}
 }

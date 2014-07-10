@@ -1,15 +1,11 @@
 package system.registry
 
-import java.io.OutputStream
-
 import models.ImageId
 import play.api.Logger
-import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.{JsResultException, JsString, Json}
 import services.ContentEnumerator
 
 import scala.concurrent.{ExecutionContext, Future}
-import ExecutionContext.Implicits.global
 
 trait PrivateRegistry extends Registry {
   outer =>
@@ -18,7 +14,7 @@ trait PrivateRegistry extends Registry {
     def registry = outer
   }
 
-  import ResourceType._
+  import system.registry.ResourceType._
 
   override def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     findResource(imageId, JsonType) flatMap {

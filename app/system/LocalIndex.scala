@@ -3,22 +3,13 @@ package system
 import java.io.File
 
 import models.Repository
-import play.api.{Application, Logger}
-
-object ProductionIndex extends S3Index {
-  import fly.play.s3.S3
-  override def bucketName: String = Configuration.s3.bucketName
-
-  override implicit def app: Application = play.api.Play.current
-
-  override lazy val s3: S3 = S3.fromConfig
-}
+import play.api.Logger
 
 trait LocalIndex extends Index {
 
   def repos: List[Repository] = ???
 
-  def init(): Unit = {
+  override def init(): Unit = {
     Logger.info(s"Creating $root")
     root.mkdirs()
   }

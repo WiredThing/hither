@@ -37,4 +37,6 @@ trait Registry {
     findResource(imageId, AncestryType)
 
   def sinkFor(id: ImageId, resourceType: ResourceType, contentLength: Option[Long] = None)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = ???
+
+  def init(): Unit = {}
 }

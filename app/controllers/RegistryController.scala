@@ -6,26 +6,14 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsString
 import play.api.mvc.{Action, BodyParser, Controller, Result}
 import services._
-import system.Configuration
-import system.registry.{Registry, ResourceType, S3Registry}
+import system.Production
+import system.registry.{Registry, ResourceType}
 
 import scala.util.Try
 
-object ProductionRegistry extends S3Registry {
-
-  import fly.play.s3.S3
-
-
-  override implicit def app = play.api.Play.current
-
-  override lazy val bucketName: String = Configuration.s3.bucketName
-  override lazy val s3 = S3.fromConfig
-
-  def init {}
-}
 
 object RegistryController extends RegistryController {
-  override def registry = ProductionRegistry
+  override def registry = Production.registry
 }
 
 trait RegistryController extends Controller {
