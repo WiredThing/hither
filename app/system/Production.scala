@@ -46,10 +46,15 @@ object Production {
     override val s3 = S3.fromConfig
 
     Logger.debug("Initialising S3 registry")
-    Logger.debug(s"Using aws.accessKeyId ${Configuration.aws.accessKeyId}")
-    Logger.debug(s"Using aws.secretKey ${Configuration.aws.secretKey}")
+    Logger.debug(s"Using aws.accessKeyId ${obfuscate(Configuration.aws.accessKeyId)}")
+    Logger.debug(s"Using aws.secretKey ${obfuscate(Configuration.aws.secretKey)}")
     Logger.debug(s"Using region ${Configuration.s3.region}")
     Logger.debug(s"Using bucket $bucketName")
+  }
+
+  def obfuscate(s: String, show: Int = 3): String = {
+    val hide = if (s.length > show) (s.length - show) else s.length
+    List.fill(hide)('*').mkString + s.substring(hide)
   }
 
   lazy val registry: Registry = Configuration.storage match {
