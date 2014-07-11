@@ -15,7 +15,7 @@ the settings for each storage type.
 
 Once you have configured the environment variables - a template for this can be found in conf/env.template - run the following command:
 
-docker run --rm --name hither -p 9000:9000 --env-file {{path to environment variables}}
+docker run --rm --name hither -p 9000:9000 --env-file {{path to environment variables}} wiredthing/hither
 
 #### Example
 
@@ -29,6 +29,6 @@ For environment variables:
 
 Stored at ~/myHither.vars. Run the command: 
 
-    docker run --rm --name hither -p 9000:9000 --env-file ~/myHither.vars
+    docker run --rm --name hither -p 9000:9000 --env-file ~/myHither.vars wiredthing/hither
     
 *Note that file storage is not fully functional yet!*
