@@ -38,6 +38,7 @@ trait RegistryController extends Controller with ContentFeeding {
   }
 
   def json(imageId: ImageId) = Action.async { implicit request =>
+    logger.debug(s"get json for ${imageId.id}")
     registry.json(imageId).map {
       case Some(js) => feedContent(js)
       case None => NotFound(s"no json for ${imageId.id}")
