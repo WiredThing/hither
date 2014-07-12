@@ -5,6 +5,8 @@ import java.io.File
 import models.Repository
 import play.api.Logger
 
+import scala.concurrent.{Future, ExecutionContext}
+
 trait LocalIndex extends Index {
   override def init(): Unit = {
     Logger.info(s"Creating $root")
@@ -40,4 +42,5 @@ trait LocalIndex extends Index {
     new File(root, name)
   }
 
+  override def repositories(implicit ctx: ExecutionContext): Future[List[Repository]] = ???
 }

@@ -38,7 +38,8 @@ trait IndexController extends Controller with ContentFeeding {
   }
 
   def putImages(repo: Repository) = Action(toIndex(repo, IndexTypes.ImagesType, index)) { request =>
-    // Don't need to do anything - all taken care of by the BodyParser
+    // Don't need to do anything - all taken care of by the BodyParser. Docker expects NoContent
+    // as a response.
     NoContent
   }
 
@@ -78,7 +79,6 @@ trait IndexController extends Controller with ContentFeeding {
   }
 
   def allocateRepo(repo: Repository) = Action(parse.json) { request =>
-    //    index.createRepoDir(repo)
     Ok.withHeaders(
       ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
       ("X-Docker-Endpoints", request.headers("Host"))
