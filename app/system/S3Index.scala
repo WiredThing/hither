@@ -1,7 +1,7 @@
 package system
 
 import fly.play.s3.{BucketFile, S3}
-import models.Repository
+import models.{Namespace, RepositoryName, Repository}
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.Json
@@ -19,6 +19,20 @@ trait S3Index extends Index {
 
   implicit def app: play.api.Application
 
+  override def repositories(implicit ctx: ExecutionContext): Future[List[Repository]] = {
+    val index: String = s"${Configuration.s3.indexRoot}"
+
+    bucket.list(s"$index/").flatMap { nsItems =>
+      val futures = nsItems.toList.map { nsItem =>
+        bucket.list(s"${nsItem.name}").map { repoItems =>
+          repoItems.toList.map { repoItem =>
+            Repository(Namespace(nsItem.name.split("/").last), RepositoryName(repoItem.name.split("/").last))
+          }
+        }
+      }
+      Future.sequence(futures).map(_.flatten)
+    }
+  }
 
   override def images(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     bucket.get(s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/images").map { bucketFile =>
@@ -28,14 +42,11 @@ trait S3Index extends Index {
     }
   }
 
-
   override def tags(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     val tagsDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/"
     bucket.list(tagsDir).flatMap { items =>
       val tagEntries = items.toList.map { item =>
-        bucket.get(item.name).map { bf =>
-          (bf.name.split("/").last, new String(bf.content))
-        }
+        bucket.get(item.name).map(bf => (bf.name.split("/").last, new String(bf.content)))
       }
       val tagMap = Future.sequence(tagEntries).map(e => Map(e: _*))
 

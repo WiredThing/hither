@@ -1,0 +1,10 @@
+@(repos:List[models.Repository])
+
+@main("Repositories") {
+
+<ul>
+@repos.map { repo =>
+    <li>@repo.qualifiedName</li>
+  }
+}
+</ul>
