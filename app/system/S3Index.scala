@@ -1,7 +1,7 @@
 package system
 
 import fly.play.s3.{BucketFile, S3}
-import models.{Namespace, RepositoryName, Repository}
+import models.{Tag, Namespace, RepositoryName, Repository}
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.Json
@@ -33,6 +33,8 @@ trait S3Index extends Index {
       Future.sequence(futures).map(_.flatten)
     }
   }
+
+  override def tagList(repo: Repository)(implicit ctx: ExecutionContext): Future[List[Tag]] = ???
 
   override def images(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     bucket.get(s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/images").map { bucketFile =>

@@ -1,6 +1,6 @@
 package system
 
-import models.Repository
+import models.{Tag, Repository}
 import play.api.libs.iteratee.Iteratee
 import services.ContentEnumerator
 import system.registry.ResourceType
@@ -13,6 +13,8 @@ object IndexTypes {
 
 trait Index {
   def repositories(implicit ctx: ExecutionContext): Future[List[Repository]]
+
+  def tagList(repo: Repository)(implicit ctx: ExecutionContext): Future[List[Tag]]
 
   def images(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 

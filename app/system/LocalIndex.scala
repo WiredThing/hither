@@ -2,7 +2,7 @@ package system
 
 import java.io.File
 
-import models.Repository
+import models.{Tag, Repository}
 import play.api.Logger
 
 import scala.concurrent.{Future, ExecutionContext}
@@ -41,6 +41,8 @@ trait LocalIndex extends Index {
     val name = s"${repo.namespace.name}/${repo.repoName.name}"
     new File(root, name)
   }
+
+  override def tagList(repo: Repository)(implicit ctx: ExecutionContext): Future[List[Tag]] = ???
 
   override def repositories(implicit ctx: ExecutionContext): Future[List[Repository]] = ???
 }
