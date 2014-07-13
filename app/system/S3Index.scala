@@ -1,19 +1,21 @@
 package system
 
-import fly.play.s3.{BucketFile, S3}
-import models.{Tag, Namespace, RepositoryName, Repository}
-import play.api.Logger
+import fly.play.s3.{BucketItem, BucketFile, S3}
+import models._
+import play.api.LoggerLike
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.Json
 import services.ContentEnumerator
 import system.registry.ResourceType
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
 trait S3Index extends Index {
   def bucketName: String
 
   def s3: S3
+
+  def logger: LoggerLike
 
   val bucket = s3.getBucket(bucketName)
 
@@ -23,77 +25,74 @@ trait S3Index extends Index {
     val index: String = s"${Configuration.s3.indexRoot}"
 
     bucket.list(s"$index/").flatMap { nsItems =>
-      val futures = nsItems.toList.map { nsItem =>
+      val repoFutures = nsItems.toList.map { nsItem =>
         bucket.list(s"${nsItem.name}").map { repoItems =>
           repoItems.toList.map { repoItem =>
             Repository(Namespace(nsItem.name.split("/").last), RepositoryName(repoItem.name.split("/").last))
           }
         }
       }
-      Future.sequence(futures).map(_.flatten)
+      Future.sequence(repoFutures).map(_.flatten)
     }
   }
 
-  override def tagList(repo: Repository)(implicit ctx: ExecutionContext): Future[List[Tag]] = ???
+  override def tagSet(repo: Repository)(implicit ctx: ExecutionContext): Future[Set[Tag]] = {
+    val tagsDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/"
 
-  override def images(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
+    bucket.list(tagsDir).flatMap { items =>
+      val tagEntries = items.toSet[BucketItem].map { item =>
+        bucket.get(item.name).map(bf => Tag(bf.name.split("/").last, ImageId(new String(bf.content))))
+      }
+      Future.sequence(tagEntries)
+    }
+  }
+
+  override def imagesStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     bucket.get(s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/images").map { bucketFile =>
       Some(ContentEnumerator(Enumerator(bucketFile.content), "application/json", Some(bucketFile.content.length)))
     }.recover {
-      case t => Logger.debug("", t); None
+      case t => logger.debug("", t); None
     }
   }
 
-  override def tags(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    val tagsDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/"
-    bucket.list(tagsDir).flatMap { items =>
-      val tagEntries = items.toList.map { item =>
-        bucket.get(item.name).map(bf => (bf.name.split("/").last, new String(bf.content)))
-      }
-      val tagMap = Future.sequence(tagEntries).map(e => Map(e: _*))
-
-      val cef = tagMap.map { m =>
-        val jsonBytes = Json.prettyPrint(Json.toJson(m)).getBytes()
-        Some(ContentEnumerator(Enumerator(jsonBytes), "application/json", Some(jsonBytes.length)))
-      }
-      cef
+  override def tagsStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
+    tagSet(repo).map { tags =>
+      val jsonBytes = Json.prettyPrint(Json.toJson(tags)).getBytes()
+      Some(ContentEnumerator(Enumerator(jsonBytes), "application/json", Some(jsonBytes.length)))
     }.recover {
-      case t => Logger.debug("", t); None
+      case t => logger.error("", t); None
     }
   }
 
 
   override def tag(repo: Repository, tagName: String)(implicit ctx: ExecutionContext): Future[Option[String]] = {
     val itemName = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/$tagName"
-    Logger.debug(s"Looking for tag $itemName")
+    logger.debug(s"Looking for tag $itemName")
+
     bucket.get(itemName).map { bucketFile =>
       Some(new String(bucketFile.content))
     }.recover {
-      case t => Logger.debug("", t); None
+      case t => logger.debug("", t); None
     }
   }
 
   override def writeTag(repo: Repository, tagName: String, value: String)(implicit ctx: ExecutionContext): Future[Unit] = {
-    val fileName = s"${
-      Configuration.s3.indexRoot
-    }/${
-      repo.qualifiedName
-    }/tags/$tagName"
+    val fileName = s"${ Configuration.s3.indexRoot}/${ repo.qualifiedName}/tags/$tagName"
     val bucketFile = BucketFile(fileName, "application/json", value.getBytes)
 
     bucket.add(bucketFile)
   }
 
   override def sinkFor(repo: Repository, resourceType: ResourceType, contentLength: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
-    Logger.info(s"Creating a sink for ${repo.qualifiedName} for resource $resourceType")
+    logger.info(s"Creating a sink for ${repo.qualifiedName} for resource $resourceType")
     val fileName = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/${resourceType.name}"
     bucketUpload(fileName, resourceType)
   }
 
-  def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
+  private def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
     Iteratee.consume[Array[Byte]]().map { bytes =>
-      Logger.info(s"Consumed ${bytes.length} bytes of data")
-      Logger.info(s"Sending to bucketFile with name $fileName")
+      logger.info(s"Consumed ${bytes.length} bytes of data")
+      logger.info(s"Sending to bucketFile with name $fileName")
       val bucketFile = BucketFile(fileName, resourceType.contentType, bytes)
 
       bucket.add(bucketFile)

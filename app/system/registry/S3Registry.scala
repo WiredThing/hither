@@ -2,7 +2,7 @@ package system.registry
 
 import fly.play.s3.{BucketFile, S3}
 import models.ImageId
-import play.api.Logger
+import play.api.LoggerLike
 import play.api.libs.iteratee._
 import services.ContentEnumerator
 import system.Configuration
@@ -16,6 +16,8 @@ trait S3Registry extends PrivateRegistry {
   def bucketName: String
 
   def s3: S3
+
+  def logger:LoggerLike
 
   implicit def app: play.api.Application
 
@@ -63,9 +65,9 @@ trait S3Registry extends PrivateRegistry {
     val fileName = s"${Configuration.s3.registryRoot}/${imageId.id}.${resourceType.name}"
 
     contentLength match {
-      case Some(l) if l < multipartUploadThreshold => Logger.info(s"Expecting $l bytes of data"); bucketUpload(fileName, resourceType)
-      case Some(l) => Logger.info(s"Expecting $l bytes of data, uploading as multipart"); Iteratee.flatten(multipartUpload(fileName, resourceType))
-      case None => Logger.info(s"Don't know how much data to expect"); Iteratee.flatten(multipartUpload(fileName, resourceType))
+      case Some(l) if l < multipartUploadThreshold => logger.debug(s"Expecting $l bytes of data"); bucketUpload(fileName, resourceType)
+      case Some(l) => logger.debug(s"Expecting $l bytes of data, uploading as multipart"); Iteratee.flatten(multipartUpload(fileName, resourceType))
+      case None => logger.debug(s"Don't know how much data to expect"); Iteratee.flatten(multipartUpload(fileName, resourceType))
     }
   }
 
@@ -73,31 +75,30 @@ trait S3Registry extends PrivateRegistry {
     val bucketFile = BucketFile(fileName, resourceType.contentType)
 
     bucket.initiateMultipartUpload(bucketFile).map { ticket =>
-      Logger.info(s"Multipart upload to ${bucketFile.name} started with ticket ${ticket}")
+      logger.debug(s"Multipart upload to ${bucketFile.name} started with ticket ${ticket}")
 
       val step = S3UploadIteratee(bucket, ticket)
 
       Cont[Array[Byte], Unit](i => step(1, 0, Array(), Future(List()))(i))
     }.recover {
-      case t => Logger.error("Got error trying to initiate upload", t); throw t
+      case t => logger.error("Got error trying to initiate upload", t); throw t
     }
   }
 
   def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
     Iteratee.consume[Array[Byte]]().map { bytes =>
-      Logger.info(s"Consumed ${bytes.length} bytes of data")
-      Logger.info(s"Sending to bucketFile with name $fileName")
+      logger.debug(s"Consumed ${bytes.length} bytes of data")
+      logger.debug(s"Sending to bucketFile with name $fileName")
       val bucketFile = BucketFile(fileName, resourceType.contentType, bytes)
 
       bucket.add(bucketFile).onComplete {
-        case Success(_) => Logger.debug(s"Successfully uploaded $fileName")
-        case Failure(t) => Logger.debug(s"Upload of $fileName failed with ${t.getMessage}")
+        case Success(_) => logger.debug(s"Successfully uploaded $fileName")
+        case Failure(t) => logger.debug(s"Upload of $fileName failed with ${t.getMessage}")
       }
     }
   }
 
   def httpUrl(bucketName: String, host: String, path: String) = {
-    val protocol = "http"
-    protocol + "://" + bucketName + "." + host + "/" + path
+    "http://" + bucketName + "." + host + "/" + path
   }
 }

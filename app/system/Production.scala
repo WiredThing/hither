@@ -18,16 +18,18 @@ object Production {
     override implicit def app: Application = play.api.Play.current
 
     override lazy val s3: S3 = S3.fromConfig
+
+    override lazy val logger = Logger
   }
 
   lazy val fileIndex = new LocalIndex {
-    override def images(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = ???
+    override def imagesStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = ???
 
     override def tag(repo: Repository, tagName: String)(implicit ctx: ExecutionContext): Future[Option[String]] = ???
 
     override def writeTag(repo: Repository, tagName: String, value: String)(implicit ctx: ExecutionContext): Future[Unit] = ???
 
-    override def tags(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = ???
+    override def tagsStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = ???
   }
 
   lazy val index = Configuration.storage match {
@@ -45,6 +47,8 @@ object Production {
 
     override val s3 = S3.fromConfig
 
+    override val logger = Logger
+
     Logger.debug("Initialising S3 registry")
     Logger.debug(s"Using aws.accessKeyId ${obfuscate(Configuration.aws.accessKeyId)}")
     Logger.debug(s"Using aws.secretKey ${obfuscate(Configuration.aws.secretKey)}")
@@ -59,6 +63,8 @@ object Production {
 
   lazy val registry: Registry = Configuration.storage match {
     case "s3" => s3Registry
+    case "file" => throw new UnsupportedOperationException("File storage is not yet supported")
+    case s => throw new IllegalArgumentException(s"Don't recognise storage type '$s'")
   }
 
 }

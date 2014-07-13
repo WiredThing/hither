@@ -31,7 +31,7 @@ trait IndexController extends Controller with ContentFeeding {
 
   def images(repo: Repository) = Action.async { implicit request =>
     logger.debug("images")
-    index.images(repo).map {
+    index.imagesStream(repo).map {
       case Some(ce) => feedContent(ce)
       case None => NotFound
     }
@@ -45,7 +45,7 @@ trait IndexController extends Controller with ContentFeeding {
 
   def tags(repo: Repository) = Action.async { implicit request =>
     logger.debug("tags")
-    index.tags(repo).map {
+    index.tagsStream(repo).map {
       case Some(ce) => feedContent(ce)
       case None => NotFound
     }

@@ -42,7 +42,7 @@ trait LocalIndex extends Index {
     new File(root, name)
   }
 
-  override def tagList(repo: Repository)(implicit ctx: ExecutionContext): Future[List[Tag]] = ???
+  override def tagSet(repo: Repository)(implicit ctx: ExecutionContext): Future[Set[Tag]] = ???
 
   override def repositories(implicit ctx: ExecutionContext): Future[List[Repository]] = ???
 }
