@@ -4,6 +4,7 @@
 
 # Home page
 GET     /                           controllers.Application.repositories
+GET     /repository/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                           controllers.Application.repository(repo:Repository)
 
 GET     /v1/_ping                   controllers.StatusController.ping
 
