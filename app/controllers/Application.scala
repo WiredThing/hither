@@ -1,5 +1,6 @@
 package controllers
 
+import models.Repository
 import play.api._
 import play.api.mvc._
 import system.{Production, Index}
@@ -20,6 +21,12 @@ trait Application extends Controller {
   def repositories = Action.async { request =>
     index.repositories.map { repos =>
       Ok(views.html.repositories(repos))
+    }
+  }
+
+  def repository(repo:Repository)  = Action.async { request =>
+    index.tagSet(repo).map { tags =>
+      Ok(views.html.showRepo(repo, tags.toList.sortWith((a, b) => a.name < b.name)))
     }
   }
 
