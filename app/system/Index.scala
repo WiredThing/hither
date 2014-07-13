@@ -14,11 +14,11 @@ object IndexTypes {
 trait Index {
   def repositories(implicit ctx: ExecutionContext): Future[List[Repository]]
 
-  def tagList(repo: Repository)(implicit ctx: ExecutionContext): Future[List[Tag]]
+  def tagSet(repo: Repository)(implicit ctx: ExecutionContext): Future[Set[Tag]]
 
-  def images(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
+  def imagesStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 
-  def tags(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
+  def tagsStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 
   def tag(repo: Repository, tagName: String)(implicit ctx: ExecutionContext): Future[Option[String]]
 
