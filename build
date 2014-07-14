@@ -8,6 +8,7 @@ echo Building docker image for hither-$HITHER_VERSION
 
 sed -e s/_VERSION_/$HITHER_VERSION/ < Dockerfile.template > Dockerfile
 
+rm -rf target/universal
 ./activator dist
 docker build -t wiredthing/hither .
 docker tag wiredthing/hither wiredthing/hither:$HITHER_VERSION
