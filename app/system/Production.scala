@@ -1,9 +1,9 @@
 package system
 
 import models.Repository
-import play.api.{Logger, Application}
+import play.api.{Application, Logger}
 import services.ContentEnumerator
-import system.index.{S3Index, FileBasedIndex}
+import system.index.FileBasedIndex
 import system.registry.{Registry, S3Registry}
 
 import scala.concurrent.{ExecutionContext, Future}

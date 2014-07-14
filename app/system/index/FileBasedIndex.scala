@@ -6,9 +6,9 @@ import models.{Repository, Tag}
 import play.api.Logger
 import system.FileLocalSource
 
+trait FileBasedIndex extends Index {
 import scala.concurrent.{ExecutionContext, Future}
 
-trait FileBasedIndex extends Index {
   override def init(): Unit = {
     Logger.info(s"Creating $root")
     root.mkdirs()

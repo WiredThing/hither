@@ -99,6 +99,6 @@ trait S3Registry extends PrivateRegistry {
   }
 
   def httpUrl(bucketName: String, host: String, path: String) = {
-    "https://" + bucketName + "." + host + "/" + path
+    "http://" + bucketName + "." + host + "/" + path
   }
 }
