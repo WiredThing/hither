@@ -1,13 +1,13 @@
 package system.registry
 
 import scala.language.postfixOps
-import fly.play.s3._
+import scala.util.{Failure, Success}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import play.api.Logger
 import play.api.libs.iteratee._
+import fly.play.s3._
 
-import scala.concurrent.{ExecutionContext, Await, Future}
-import scala.util.{Failure, Success}
 
 object S3UploadIteratee {
 
