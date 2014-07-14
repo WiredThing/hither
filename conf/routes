@@ -6,6 +6,8 @@
 GET     /                           controllers.Application.repositories
 GET     /repository/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                           controllers.Application.repository(repo:Repository)
 
+GET     /multipartUploads           controllers.S3Controller.multipartUploads
+
 GET     /v1/_ping                   controllers.StatusController.ping
 
 #DELETE  /v1/repositories/:repository

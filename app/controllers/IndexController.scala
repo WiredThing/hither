@@ -2,7 +2,7 @@ package controllers
 
 import play.api.LoggerLike
 import play.api.mvc.Controller
-import system.index.{IndexTypes, Index}
+import system.index.Index
 
 
 object IndexController extends IndexController {
@@ -20,8 +20,8 @@ trait IndexController extends Controller with ContentFeeding {
   import play.api.libs.concurrent.Execution.Implicits._
   import play.api.libs.json.JsString
   import play.api.mvc.{Action, BodyParser}
-  import system.registry.ResourceType
   import system.index.IndexTypes
+  import system.registry.ResourceType
 
   import scala.concurrent.Future
 

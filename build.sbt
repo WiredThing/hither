@@ -18,6 +18,7 @@ libraryDependencies ++= Seq(
   jdbc,
   cache,
   ws,
+  "org.scala-lang.modules" %% "scala-xml" % "1.0.1",
   "nl.rhinofly" %% "play-s3" % "5.0.0",
   "org.scalatest" %% "scalatest" % "2.1.7" % "test"
 )

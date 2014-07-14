@@ -3,8 +3,8 @@ package controllers
 import models.Repository
 import play.api._
 import play.api.mvc._
-import system.index.Index
 import system.Production
+import system.index.Index
 
 object Application extends Application {
   override lazy val index: Index = Production.index
@@ -13,6 +13,7 @@ object Application extends Application {
 }
 
 trait Application extends Controller {
+
   import play.api.libs.concurrent.Execution.Implicits._
 
   def index: Index
@@ -25,7 +26,7 @@ trait Application extends Controller {
     }
   }
 
-  def repository(repo:Repository)  = Action.async { request =>
+  def repository(repo: Repository) = Action.async { request =>
     index.tagSet(repo).map { tags =>
       Ok(views.html.showRepo(repo, tags.toList.sortWith((a, b) => a.name < b.name)))
     }

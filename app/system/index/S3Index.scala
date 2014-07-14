@@ -90,7 +90,7 @@ trait S3Index extends Index {
     bucketUpload(fileName, resourceType)
   }
 
-  private def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
+  protected def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
     Iteratee.consume[Array[Byte]]().map { bytes =>
       logger.info(s"Consumed ${bytes.length} bytes of data")
       logger.info(s"Sending to bucketFile with name $fileName")
