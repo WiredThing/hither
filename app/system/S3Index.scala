@@ -58,7 +58,8 @@ trait S3Index extends Index {
 
   override def tagsStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     tagSet(repo).map { tags =>
-      val jsonBytes = Json.prettyPrint(Json.toJson(tags)).getBytes()
+      val tagMap = Map(tags.toSeq.map(t => t.name -> t.version): _*)
+      val jsonBytes = Json.prettyPrint(Json.toJson(tagMap)).getBytes()
       Some(ContentEnumerator(Enumerator(jsonBytes), "application/json", Some(jsonBytes.length)))
     }.recover {
       case t => logger.error("", t); None
@@ -78,7 +79,7 @@ trait S3Index extends Index {
   }
 
   override def writeTag(repo: Repository, tagName: String, value: String)(implicit ctx: ExecutionContext): Future[Unit] = {
-    val fileName = s"${ Configuration.s3.indexRoot}/${ repo.qualifiedName}/tags/$tagName"
+    val fileName = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/$tagName"
     val bucketFile = BucketFile(fileName, "application/json", value.getBytes)
 
     bucket.add(bucketFile)

@@ -45,10 +45,13 @@ trait IndexController extends Controller with ContentFeeding {
   }
 
   def tags(repo: Repository) = Action.async { implicit request =>
-    logger.debug("tags")
+    logger.debug(s"getting tags for $repo")
+
     index.tagsStream(repo).map {
       case Some(ce) => feedContent(ce)
       case None => NotFound
+    }.recover {
+      case t => logger.debug("", t) ; InternalServerError
     }
   }
 
