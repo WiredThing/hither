@@ -21,6 +21,12 @@ object S3UploadIteratee {
           Logger.info(s"Pushing final part $partNumber with ${accumulatedChunks.length} bytes")
           val uploadTicket = bucket.uploadPart(ticket, BucketFilePart(partNumber, accumulatedChunks))
 
+          uploadTicket.onFailure {
+            case e =>
+              Logger.error("Error during upload of chunk, aborting multipart upload", e)
+              bucket.abortMultipartUpload(ticket)
+          }
+
           uploadTicket.map { t =>
             Logger.info(s"Completing upload with $t and tickets for ${ts.size + 1} parts")
             bucket.s3.completeMultipartUpload(bucket.name, ticket, (t +: ts).reverse).onComplete {
@@ -28,7 +34,9 @@ object S3UploadIteratee {
                 case 200 => Logger.info(s"Multipart upload response was ${response.status}")
                 case x => Logger.info(s"Response to multipart upload completion was $x (${response.body})")
               }
-              case Failure(ex) => Logger.info("Multipart upload failed", ex)
+              case Failure(ex) =>
+                Logger.info("Multipart upload failed", ex)
+                bucket.abortMultipartUpload(ticket)
             }
           }
         }
@@ -53,6 +61,12 @@ object S3UploadIteratee {
             bucket.uploadPart(ticket, BucketFilePart(partNumber, chunk)).map { t =>
               t +: ts
             }
+          }
+
+          f.onFailure {
+            case e =>
+              Logger.error("Error during upload of chunk, aborting multipart upload", e)
+              bucket.abortMultipartUpload(ticket)
           }
 
           Await.result(f, 10 minutes)

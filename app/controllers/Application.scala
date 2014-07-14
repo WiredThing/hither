@@ -3,7 +3,8 @@ package controllers
 import models.Repository
 import play.api._
 import play.api.mvc._
-import system.{Production, Index}
+import system.index.Index
+import system.Production
 
 object Application extends Application {
   override lazy val index: Index = Production.index

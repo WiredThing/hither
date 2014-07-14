@@ -3,6 +3,7 @@ package system
 import models.Repository
 import play.api.{Logger, Application}
 import services.ContentEnumerator
+import system.index.{S3Index, FileBasedIndex}
 import system.registry.{Registry, S3Registry}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,7 +23,7 @@ object Production {
     override lazy val logger = Logger
   }
 
-  lazy val fileIndex = new LocalIndex {
+  lazy val fileIndex = new FileBasedIndex {
     override def imagesStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = ???
 
     override def tag(repo: Repository, tagName: String)(implicit ctx: ExecutionContext): Future[Option[String]] = ???

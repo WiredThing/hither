@@ -1,11 +1,12 @@
-package system
+package system.index
 
-import fly.play.s3.{BucketItem, BucketFile, S3}
+import fly.play.s3.{BucketFile, BucketItem, S3}
 import models._
 import play.api.LoggerLike
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.Json
 import services.ContentEnumerator
+import system.Configuration
 import system.registry.ResourceType
 
 import scala.concurrent.{ExecutionContext, Future}

@@ -71,7 +71,7 @@ trait S3Registry extends PrivateRegistry {
     }
   }
 
-  def multipartUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Iteratee[Array[Byte], Unit]] = {
+  protected def multipartUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Iteratee[Array[Byte], Unit]] = {
     val bucketFile = BucketFile(fileName, resourceType.contentType)
 
     bucket.initiateMultipartUpload(bucketFile).map { ticket =>

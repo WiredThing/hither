@@ -1,13 +1,14 @@
-package system
+package system.index
 
 import java.io.File
 
-import models.{Tag, Repository}
+import models.{Repository, Tag}
 import play.api.Logger
+import system.FileLocalSource
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
-trait LocalIndex extends Index {
+trait FileBasedIndex extends Index {
   override def init(): Unit = {
     Logger.info(s"Creating $root")
     root.mkdirs()

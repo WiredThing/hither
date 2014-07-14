@@ -1,15 +1,11 @@
-package system
+package system.index
 
-import models.{Tag, Repository}
+import models.{Repository, Tag}
 import play.api.libs.iteratee.Iteratee
 import services.ContentEnumerator
 import system.registry.ResourceType
 
-import scala.concurrent.{Future, ExecutionContext}
-
-object IndexTypes {
-  val ImagesType = ResourceType("images", "application/json")
-}
+import scala.concurrent.{ExecutionContext, Future}
 
 trait Index {
   def repositories(implicit ctx: ExecutionContext): Future[List[Repository]]

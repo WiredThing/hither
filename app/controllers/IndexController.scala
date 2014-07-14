@@ -2,11 +2,12 @@ package controllers
 
 import play.api.LoggerLike
 import play.api.mvc.Controller
+import system.index.{IndexTypes, Index}
 
 
 object IndexController extends IndexController {
 
-  import system.{Index, Production}
+  import system.Production
 
   override lazy val index: Index = Production.index
 
@@ -20,7 +21,7 @@ trait IndexController extends Controller with ContentFeeding {
   import play.api.libs.json.JsString
   import play.api.mvc.{Action, BodyParser}
   import system.registry.ResourceType
-  import system.{Index, IndexTypes}
+  import system.index.IndexTypes
 
   import scala.concurrent.Future
 
