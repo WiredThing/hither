@@ -41,12 +41,8 @@ object S3UploadIteratee {
           }
         }
 
-        // Contraversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
-        // then the iteratee will happliy consume all the incoming data and buffer it up in memory,
-        // only discarding chunk when they've finished uploading. This could potentially lead
-        // to out-of-memory errors. Blocking creates back-pressure to slow the data coming in, at
-        // the cost of thread starvation if several uploads happen concurrently. Use a different thread
-        // context, perhaps?
+        // Here we want to wait until the upload is completed so that the docker push does not exit
+        // before the data is actually on the registry.
         Await.result(f, 10 minutes)
         Done(0, Input.EOF)
       }
@@ -69,6 +65,12 @@ object S3UploadIteratee {
               bucket.abortMultipartUpload(ticket)
           }
 
+          // Contraversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
+          // then the iteratee will happliy consume all the incoming data and buffer it up in memory,
+          // only discarding chunk when they've finished uploading. This could potentially lead
+          // to out-of-memory errors. Blocking creates back-pressure to slow the data coming in, at
+          // the cost of thread starvation if several uploads happen concurrently. Use a different thread
+          // context, perhaps?
           Await.result(f, 10 minutes)
 
           Cont[Array[Byte], Unit](i => step(partNumber + 1, totalSize + chunk.length, Array(), f)(i))

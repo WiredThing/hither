@@ -1,0 +1,9 @@
+@(bucketName:String, orphans:Seq[String])
+
+@main(s"Removed Orphans") {
+
+  <h3>Removed @{orphans.length} orphaned json files from @bucketName</h3>
+    @orphans.map {orphan =>
+       @{orphan}<br>
+    }
+}
