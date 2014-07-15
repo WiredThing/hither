@@ -1,9 +1,11 @@
-FROM dockerfile/java
+FROM wiredthing/oraclejdk:7u60
 MAINTAINER Doug Clinton <doug@wiredthing.com>
 
 VOLUME ["/tmp/work"]
 
 WORKDIR /tmp/work
+
+RUN apt-get install -y unzip
 
 ADD target/universal/hither-_VERSION_.zip /tmp/work/hither.zip
 RUN unzip hither && mv /tmp/work/hither-_VERSION_ /opt/hither
