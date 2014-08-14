@@ -17,18 +17,18 @@ trait S3Registry extends PrivateRegistry {
 
   def s3: S3
 
-  def logger:LoggerLike
+  def logger: LoggerLike
 
   implicit def app: play.api.Application
 
   val multipartUploadThreshold: Long = 5 * 1024 * 1024
 
+  def httpUrl(bucketName: String, host: String, path: String) = s"https://$host/$bucketName/$path"
+
   override def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
 
     val pathName = s"${Configuration.s3.registryRoot}/${imageId.id}.${resourceType.name}"
-
     val url: String = httpUrl(bucketName, s3.host, pathName)
-
     val ws = s3.awsWithSigner.url(url).sign("GET")
 
     ws.withRequestTimeout((10 minutes).toMillis.toInt).getStream().map { result =>
@@ -45,7 +45,6 @@ trait S3Registry extends PrivateRegistry {
       }
     }
   }
-
 
   override def layerHead(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[Long]] = {
     val bucket = s3.getBucket(bucketName)
@@ -98,7 +97,5 @@ trait S3Registry extends PrivateRegistry {
     }
   }
 
-  def httpUrl(bucketName: String, host: String, path: String) = {
-    "http://" + bucketName + "." + host + "/" + path
-  }
+
 }

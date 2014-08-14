@@ -2,7 +2,7 @@ package system.index
 
 import fly.play.s3.{BucketFile, BucketItem, S3}
 import models._
-import play.api.{Logger, LoggerLike}
+import play.api.LoggerLike
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.Json
 import services.ContentEnumerator
@@ -57,13 +57,9 @@ trait S3Index extends Index {
   }
 
   override def tagsStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    println("tagsStream")
-
     tagSet(repo).map { tags =>
-      val tagMap = Map(tags.toSeq.map(t => (t.name, t.version)): _*)
-      val json = Json.toJson(tagMap)
-      logger.info(json.toString)
-      val jsonBytes = Json.prettyPrint(json).getBytes()
+      val tagMap = Map(tags.toSeq.map(t => t.name -> t.version): _*)
+      val jsonBytes = Json.prettyPrint(Json.toJson(tagMap)).getBytes()
       Some(ContentEnumerator(Enumerator(jsonBytes), "application/json", Some(jsonBytes.length)))
     }.recover {
       case t => logger.error("", t); None
@@ -83,7 +79,7 @@ trait S3Index extends Index {
   }
 
   override def writeTag(repo: Repository, tagName: String, value: String)(implicit ctx: ExecutionContext): Future[Unit] = {
-    val fileName = s"${ Configuration.s3.indexRoot}/${ repo.qualifiedName}/tags/$tagName"
+    val fileName = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/$tagName"
     val bucketFile = BucketFile(fileName, "application/json", value.getBytes)
 
     bucket.add(bucketFile)
@@ -95,7 +91,7 @@ trait S3Index extends Index {
     bucketUpload(fileName, resourceType)
   }
 
-  protected def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
+  private def bucketUpload(fileName: String, resourceType: ResourceType)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
     Iteratee.consume[Array[Byte]]().map { bytes =>
       logger.info(s"Consumed ${bytes.length} bytes of data")
       logger.info(s"Sending to bucketFile with name $fileName")
