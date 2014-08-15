@@ -14,7 +14,7 @@ scalaVersion := "2.11.1"
 
 scalacOptions ++= Seq("-feature")
 
-resolvers += "Local Artifactory" at "http://192.168.59.103:8081"
+resolvers += "WiredThing forks Repository" at "http://nexus.wiredthing.com/artifactory/libs-forked-local"
 
 resolvers += "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local"
 
@@ -27,8 +27,6 @@ libraryDependencies ++= Seq(
   cache,
   ws,
   "org.scala-lang.modules" %% "scala-xml" % "1.0.1",
-  "nl.rhinofly" %% "play-s3" % "5.0.0",
+  "nl.rhinofly" %% "play-s3" % "5.0.0-FORKED",
   "org.scalatest" %% "scalatest" % "2.1.7" % "test"
 )
-
-
