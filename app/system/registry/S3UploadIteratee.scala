@@ -65,9 +65,9 @@ object S3UploadIteratee {
               bucket.abortMultipartUpload(ticket)
           }
 
-          // Contraversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
-          // then the iteratee will happliy consume all the incoming data and buffer it up in memory,
-          // only discarding chunk when they've finished uploading. This could potentially lead
+          // Controversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
+          // then the iteratee will happily consume all the incoming data and buffer it up in memory,
+          // only discarding chunks when they've finished uploading. This could potentially lead
           // to out-of-memory errors. Blocking creates back-pressure to slow the data coming in, at
           // the cost of thread starvation if several uploads happen concurrently. Use a different thread
           // context, perhaps?

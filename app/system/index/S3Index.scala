@@ -41,10 +41,10 @@ trait S3Index extends Index {
     val tagsDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/"
 
     bucket.list(tagsDir).flatMap { items =>
-      val tagEntries = items.toSet[BucketItem].map { item =>
+      val tagEntries = items.map { item =>
         bucket.get(item.name).map(bf => Tag(bf.name.split("/").last, ImageId(new String(bf.content))))
       }
-      Future.sequence(tagEntries)
+      Future.sequence(tagEntries.toSet)
     }
   }
 
