@@ -14,17 +14,13 @@ scalaVersion := "2.11.1"
 
 scalacOptions ++= Seq("-feature")
 
-resolvers += "WiredThing forks Repository" at "http://nexus.wiredthing.com/artifactory/libs-forked-local"
-
-resolvers += "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local"
-
-publishTo := Some("Artifactory Realm" at "http://192.168.59.103:8081/artifactory/simple/wiredthing-snapshot/")
+resolvers ++= Seq(
+  "WiredThing Internal Forks Repository" at "http://artifactory.wiredthing.com/artifactory/libs-forked-local"
+)
 
 credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 libraryDependencies ++= Seq(
-  jdbc,
-  cache,
   ws,
   "org.scala-lang.modules" %% "scala-xml" % "1.0.1",
   "nl.rhinofly" %% "play-s3" % "5.0.0-FORKED",
