@@ -31,7 +31,9 @@ trait S3Registry extends PrivateRegistry {
    */
   val multipartUploadThreshold: Long = 5 * 1024 * 1024
 
-  def httpUrl(bucketName: String, host: String, path: String) = s"https://$host/$bucketName/$path"
+  def protocol = if (Configuration.s3.useHttps) "https" else "http"
+
+  def httpUrl(bucketName: String, host: String, path: String) = s"$protocol://$host/$bucketName/$path"
 
   def pathName(i: ImageId, r: ResourceType) = s"${Configuration.s3.registryRoot}/${i.id}.${r.name}"
 

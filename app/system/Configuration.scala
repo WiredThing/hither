@@ -30,6 +30,7 @@ object Configuration {
 
     lazy val bucketName = Play.configuration.getString("s3.bucketName").get
     lazy val region = Play.configuration.getString("s3.region").get
+    lazy val useHttps : Boolean = Play.configuration.getBoolean("s3.https").getOrElse(false)
   }
 
 }
