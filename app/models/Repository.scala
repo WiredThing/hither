@@ -14,5 +14,9 @@ case class Repository(namespace: Namespace, repoName: RepositoryName) {
 
 object Repository {
   def apply(repoName: RepositoryName): Repository = Repository(Namespace.default, repoName)
+
+  def parse(name:String) :Repository = ???
+
+  def qualifiedName(repo:Repository) : Option[String] = Some(repo.qualifiedName)
 }
 
