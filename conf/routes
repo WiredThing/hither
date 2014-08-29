@@ -3,34 +3,38 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.Application.repositories
-GET     /repository/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                           controllers.Application.repository(repo:Repository)
-GET     /multipartUploads           controllers.S3Controller.multipartUploads
-GET     /removeOrphans              controllers.S3Controller.removeOrphans
+GET         /                                                                       controllers.Application.repositories
 
-GET     /v1/_ping                   controllers.StatusController.ping
+GET         /repository/add                                                         controllers.RepositoryController.add
+POST        /repository/create                                                      controllers.RepositoryController.create
+GET         /repository/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                           controllers.Application.repository(repo:Repository)
+
+GET         /multipartUploads                                                       controllers.S3Controller.multipartUploads
+GET         /removeOrphans                                                          controllers.S3Controller.removeOrphans
+
+GET         /v1/_ping                                                               controllers.StatusController.ping
 
 #DELETE  /v1/repositories/:repository
 
-GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags                controllers.IndexController.tags(repo:Repository)
-GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.IndexController.tagName(repo:Repository, tagName:String)
-PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName       controllers.IndexController.putTagName(repo:Repository, tagName:String)
+GET         /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags                 controllers.IndexController.tags(repo:Repository)
+GET         /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName        controllers.IndexController.tagName(repo:Repository, tagName:String)
+PUT         /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/tags/:tagName        controllers.IndexController.putTagName(repo:Repository, tagName:String)
 
-PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/                    controllers.IndexController.allocateRepo(repo:Repository)
+PUT         /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/                     controllers.IndexController.allocateRepo(repo:Repository)
 
-GET     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.IndexController.images(repo:Repository)
-PUT     /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images              controllers.IndexController.putImages(repo:Repository)
+GET         /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images               controllers.IndexController.images(repo:Repository)
+PUT         /v1/repositories/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>/images               controllers.IndexController.putImages(repo:Repository)
 
-GET     /v1/images/:imageId/ancestry    controllers.RegistryController.ancestry(imageId:ImageId)
-GET     /v1/images/:imageId/json        controllers.RegistryController.json(imageId:ImageId)
-PUT     /v1/images/:imageId/json        controllers.RegistryController.putJson(imageId:ImageId)
+GET         /v1/images/:imageId/ancestry                                            controllers.RegistryController.ancestry(imageId:ImageId)
+GET         /v1/images/:imageId/json                                                controllers.RegistryController.json(imageId:ImageId)
+PUT         /v1/images/:imageId/json                                                controllers.RegistryController.putJson(imageId:ImageId)
 
-HEAD    /v1/images/:imageId/layer       controllers.RegistryController.layerHead(imageId:ImageId)
-GET     /v1/images/:imageId/layer       controllers.RegistryController.layer(imageId:ImageId)
+HEAD        /v1/images/:imageId/layer                                               controllers.RegistryController.layerHead(imageId:ImageId)
+GET         /v1/images/:imageId/layer                                               controllers.RegistryController.layer(imageId:ImageId)
 
-PUT     /v1/images/:imageId/layer       controllers.RegistryController.putLayer(imageId:ImageId)
-PUT     /v1/images/:imageId/checksum    controllers.RegistryController.putChecksum(imageId:ImageId)
+PUT         /v1/images/:imageId/layer                                               controllers.RegistryController.putLayer(imageId:ImageId)
+PUT         /v1/images/:imageId/checksum                                            controllers.RegistryController.putChecksum(imageId:ImageId)
 
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
+GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)

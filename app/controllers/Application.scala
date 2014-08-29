@@ -30,5 +30,4 @@ trait Application extends Controller {
       Ok(views.html.showRepo(repo, tags.toList.sortWith((a, b) => a.name < b.name)))
     }
   }
-
 }
