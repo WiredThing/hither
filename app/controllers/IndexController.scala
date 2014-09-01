@@ -2,6 +2,7 @@ package controllers
 
 import play.api.LoggerLike
 import play.api.mvc.Controller
+import system.Configuration
 import system.index.Index
 
 
@@ -12,6 +13,8 @@ object IndexController extends IndexController {
   override lazy val index: Index = Production.index
 
   override lazy val logger: LoggerLike = play.api.Logger
+
+  override lazy val allowAnonRepoCreation: Boolean = Configuration.hither.allowAnonRepoCreation
 }
 
 trait IndexController extends Controller with ContentFeeding {
@@ -29,6 +32,8 @@ trait IndexController extends Controller with ContentFeeding {
   def index: Index
 
   def logger: LoggerLike
+
+  def allowAnonRepoCreation: Boolean
 
   def images(repo: Repository) = Action.async { implicit request =>
     logger.debug("images")
@@ -51,7 +56,7 @@ trait IndexController extends Controller with ContentFeeding {
       case Some(ce) => feedContent(ce)
       case None => NotFound
     }.recover {
-      case t => logger.debug("", t) ; InternalServerError
+      case t => logger.debug("", t); InternalServerError
     }
   }
 
@@ -82,10 +87,22 @@ trait IndexController extends Controller with ContentFeeding {
     }
   }
 
-  def allocateRepo(repo: Repository) = Action(parse.json) { request =>
-    Ok.withHeaders(
-      ("X-Docker-Token", s"""signature=123abc,repository="${repo.qualifiedName}",access=write"""),
-      ("X-Docker-Endpoints", request.headers("Host"))
-    )
+  def allocateRepo(repo: Repository) = Action.async(parse.json) { request =>
+    logger.debug(s"Allocate repo ${repo.qualifiedName}")
+
+    val maybeRepo: Future[Option[Repository]] = index.exists(repo).flatMap {
+      case true => Future(Some(repo))
+      case false if allowAnonRepoCreation => index.create(repo).map(_ => Some(repo))
+      case _ => Future(None)
+    }
+
+    maybeRepo.map {
+      case Some(r) =>
+        Ok.withHeaders(
+          ("X-Docker-Token", s"""signature=123abc,repository="${r.qualifiedName}",access=write"""),
+          ("X-Docker-Endpoints", request.headers("Host"))
+        )
+      case None => Unauthorized
+    }
   }
 }

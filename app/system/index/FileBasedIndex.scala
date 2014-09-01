@@ -24,6 +24,16 @@ import scala.concurrent.{ExecutionContext, Future}
     val kind = tagName
   }
 
+
+  override def exists(repo: Repository)(implicit ctx: ExecutionContext): Future[Boolean] = {
+    Future(buildRepoDir(repo).exists())
+  }
+
+
+  override def create(repo: Repository)(implicit ctx: ExecutionContext): Future[Unit] = {
+    Future(buildRepoDir(repo).mkdir())
+  }
+
   def buildImagesPath(repo: Repository) = {
     ImagesSource(new File(buildRepoDir(repo), "images"))
   }

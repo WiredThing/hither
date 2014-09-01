@@ -1,0 +1,7 @@
+@(repo: models.Repository)
+
+
+@main(s"No repository: ${repo.qualifiedName}") {
+    There is no existing repository called @repo.qualifiedName. <a href="/repository/create/@repo.qualifiedName">
+        Create</a> it?
+}

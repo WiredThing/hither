@@ -1,9 +1,0 @@
-@(repoForm: Form[Repository])
-
-@import helper._
-
-@main("Add a new Repository") {
-    @form(action = routes.RepositoryController.create) {
-        @inputText(repoForm("name"))
-    }
-}

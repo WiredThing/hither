@@ -10,6 +10,10 @@ import scala.concurrent.{ExecutionContext, Future}
 trait Index {
   def repositories(implicit ctx: ExecutionContext): Future[List[Repository]]
 
+  def exists(repo: Repository)(implicit ctx: ExecutionContext): Future[Boolean]
+
+  def create(repo:Repository)(implicit ctx: ExecutionContext): Future[Unit]
+
   def tagSet(repo: Repository)(implicit ctx: ExecutionContext): Future[Set[Tag]]
 
   def imagesStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]

@@ -4,12 +4,8 @@
 
 <ul>
 @repos.map { repo =>
-    <li><a href="/repository/@repo.qualifiedName">@repo.qualifiedName</li>
+    <li><a href="/repository/show/@repo.qualifiedName">@repo.qualifiedName</li>
   }
 }
 </ul>
 
-
-<div>
-    <a href="/repository/add">Create a repository</a>
-</div>

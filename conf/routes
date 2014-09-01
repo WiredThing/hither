@@ -3,11 +3,10 @@
 # ~~~~
 
 # Home page
-GET         /                                                                       controllers.Application.repositories
+GET         /                                                                       controllers.RepositoryController.repositories
 
-GET         /repository/add                                                         controllers.RepositoryController.add
-POST        /repository/create                                                      controllers.RepositoryController.create
-GET         /repository/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                           controllers.Application.repository(repo:Repository)
+GET         /repository/create/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                    controllers.RepositoryController.create(repo:Repository)
+GET         /repository/show/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                      controllers.RepositoryController.show(repo:Repository)
 
 GET         /multipartUploads                                                       controllers.S3Controller.multipartUploads
 GET         /removeOrphans                                                          controllers.S3Controller.removeOrphans

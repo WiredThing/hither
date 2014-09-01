@@ -37,8 +37,25 @@ trait S3Index extends Index {
     }
   }
 
+  override def exists(repo: Repository)(implicit ctx: ExecutionContext): Future[Boolean] = {
+    repositories.map(_.contains(repo))
+  }
+
+  override def create(repo: Repository)(implicit ctx: ExecutionContext): Future[Unit] = {
+    val repoDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}"
+    val imagesFileName = s"$repoDir/images"
+    val imagesFile = BucketFile(imagesFileName, "application/json", "{}".getBytes)
+    val tagsDir = BucketFile(s"$repoDir/tags/", "")
+
+    exists(repo).flatMap {
+      case false => bucket.add(imagesFile).flatMap(_ => bucket.add(tagsDir))
+      case true => Future(Unit)
+    }
+  }
+
   override def tagSet(repo: Repository)(implicit ctx: ExecutionContext): Future[Set[Tag]] = {
-    val tagsDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}/tags/"
+    val repoDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}"
+    val tagsDir = s"$repoDir/tags/"
 
     bucket.list(tagsDir).flatMap { items =>
       val tagEntries = items.map { item =>

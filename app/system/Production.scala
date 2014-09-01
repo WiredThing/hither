@@ -33,7 +33,7 @@ object Production {
     override def tagsStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = ???
   }
 
-  lazy val index = Configuration.storage match {
+  lazy val index = Configuration.hither.storage match {
     case "s3" => s3Index
     case "file" => fileIndex
   }
@@ -62,7 +62,7 @@ object Production {
     List.fill(hide)('*').mkString + s.substring(hide)
   }
 
-  lazy val registry: Registry = Configuration.storage match {
+  lazy val registry: Registry = Configuration.hither.storage match {
     case "s3" => s3Registry
     case "file" => throw new UnsupportedOperationException("File storage is not yet supported")
     case s => throw new IllegalArgumentException(s"Don't recognise storage type '$s'")
