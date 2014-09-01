@@ -35,7 +35,7 @@ trait S3Registry extends PrivateRegistry {
 
   def httpUrl(bucketName: String, host: String, path: String) = s"$protocol://$host/$bucketName/$path"
 
-  def pathName(i: ImageId, r: ResourceType) = s"${Configuration.s3.registryRoot}/${i.id}.${r.name}"
+  def pathName(i: ImageId, r: ResourceType) = s"${Configuration.s3.registryRoot}/${i.id}/${r.name}"
 
   implicit class HeadersWrapper(headers: WSResponseHeaders) {
     def contentLength: Option[Long] = for {
