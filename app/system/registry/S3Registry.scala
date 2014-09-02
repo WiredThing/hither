@@ -1,6 +1,6 @@
 package system.registry
 
-import fly.play.s3.{BucketFile, S3}
+import fly.play.s3.{S3Response, BucketFile, S3}
 import models.ImageId
 import play.api.LoggerLike
 import play.api.libs.iteratee._
@@ -43,6 +43,15 @@ trait S3Registry extends PrivateRegistry {
       s <- ls.headOption
       l <- Try(s.toLong).toOption
     } yield l
+  }
+
+
+  override def resourceExists(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Boolean] = {
+    logger.debug(s"Checking if ${resourceType.name} exists for image ${imageId.id}")
+    bucket.list(s"${Configuration.s3.registryRoot}/${imageId.id}/").map { entries =>
+      logger.debug(entries.toString)
+      entries.toList.exists(_.name == pathName(imageId, resourceType))
+    }
   }
 
   override def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {

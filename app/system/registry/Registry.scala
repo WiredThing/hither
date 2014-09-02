@@ -23,6 +23,8 @@ trait Registry {
 
   import ResourceType._
 
+  def resourceExists(imageId:ImageId, resourceType:ResourceType)(implicit ctx: ExecutionContext): Future[Boolean]
+
   def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]]
 
   def layerHead(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[Long]]
@@ -31,7 +33,10 @@ trait Registry {
     findResource(imageId, LayerType)
 
   def json(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] =
-    findResource(imageId, JsonType)
+    resourceExists(imageId, LayerType).flatMap {
+      case true => findResource(imageId, JsonType)
+      case false => Future(None)
+    }
 
   def ancestry(imageId: ImageId)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] =
     findResource(imageId, AncestryType)

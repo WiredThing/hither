@@ -7,6 +7,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.{Action, Controller}
 import system.Configuration
 
+import scala.concurrent.Future
 import scala.xml.Elem
 
 case class MultipartUpload(key: String, uploadId: String)
@@ -45,26 +46,18 @@ object S3Controller extends Controller with ContentFeeding {
   }
 
   def removeOrphans = Action.async { request =>
-    bucket.list(Configuration.s3.registryRoot + "/").map { items =>
-      val itemNames = items.toSeq.map(_.name)
-
-      val orphans = identifyOrphanedJsons(itemNames)
-      Logger.debug(s"Identified ${orphans.length} orphans")
-
-      orphans.foreach { o =>
-        bucket.remove(o).recover {
-          case t => Logger.error(s"Failed to remove $o", t)
+    bucket.list(Configuration.s3.registryRoot + "/").flatMap { layerIds =>
+      val orphanedLayers = layerIds.toList.map { layerId =>
+        bucket.list(Configuration.s3.registryRoot + "/" + layerId + "/").map { items =>
+          val entries = items.map(_.name.split("/").last).toList
+          if (!entries.contains("layer")) Some(layerId) else None
         }
       }
 
-      Ok(views.html.listRemovedOrphans(bucket.name, orphans))
+      Future.sequence(orphanedLayers).map(_.flatten.map(_.name)).map { orphans =>
+        orphans.foreach(layerId => bucket.remove(Configuration.s3.registryRoot + "/" + layerId + "/"))
+        Ok(views.html.listRemovedOrphans(bucket.name, orphans))
+      }
     }
-  }
-
-  def identifyOrphanedJsons(itemNames: Seq[String]): Seq[String] = {
-    val (jsons, others) = itemNames.partition(_.endsWith(".json"))
-    val (layers, _) = others.partition(_.endsWith(".layer"))
-    val (orphans, _) = jsons.partition(j => !layers.contains(j.split('.').head + ".layer"))
-    orphans
   }
 }
