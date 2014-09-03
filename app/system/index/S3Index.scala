@@ -45,10 +45,9 @@ trait S3Index extends Index {
     val repoDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}"
     val imagesFileName = s"$repoDir/images"
     val imagesFile = BucketFile(imagesFileName, "application/json", "{}".getBytes)
-    val tagsDir = BucketFile(s"$repoDir/tags/", "")
 
     exists(repo).flatMap {
-      case false => bucket.add(imagesFile).flatMap(_ => bucket.add(tagsDir))
+      case false => bucket.add(imagesFile)
       case true => Future(Unit)
     }
   }
@@ -57,7 +56,10 @@ trait S3Index extends Index {
     val repoDir = s"${Configuration.s3.indexRoot}/${repo.qualifiedName}"
     val tagsDir = s"$repoDir/tags/"
 
+    logger.info(s"getting tags from $tagsDir")
+
     bucket.list(tagsDir).flatMap { items =>
+      logger.info(s"got tags $items")
       val tagEntries = items.map { item =>
         bucket.get(item.name).map(bf => Tag(bf.name.split("/").last, ImageId(new String(bf.content))))
       }
