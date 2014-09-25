@@ -1,10 +1,11 @@
 import play.PlayImport.PlayKeys._
 
+
 organization := "com.wiredthing"
 
 name := "hither"
 
-version := Option(System.getenv("HITHER_VERSION")).getOrElse("999-SNAPSHOT")
+version := IO.read(file("version")).trim()
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
@@ -21,7 +22,7 @@ resolvers ++= Seq(
 credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 libraryDependencies ++= Seq(
-  ws,
+  ws withSources(),
   "org.scala-lang.modules" %% "scala-xml" % "1.0.1",
   "nl.rhinofly" %% "play-s3" % "5.0.1-SNAPSHOT",
   "org.scalatest" %% "scalatest" % "2.1.7" % "test"

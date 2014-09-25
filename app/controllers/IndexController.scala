@@ -68,12 +68,10 @@ trait IndexController extends Controller with ContentFeeding {
     }
   }
 
-  def putTagName(repo: Repository, tagName: String) = {
-    Action.async(parse.json) { request =>
-      request.body match {
-        case JsString(value) => index.writeTag(repo, tagName, value).map(_ => Ok(JsString("")))
-        case _ => Future.successful(BadRequest)
-      }
+  def putTagName(repo: Repository, tagName: String) = Action.async(parse.json) { request =>
+    request.body match {
+      case JsString(value) => index.writeTag(repo, tagName, value).map(_ => Ok(JsString("")))
+      case _ => Future.successful(BadRequest)
     }
   }
 
