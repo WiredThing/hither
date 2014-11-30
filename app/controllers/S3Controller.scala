@@ -1,5 +1,6 @@
 package controllers
 
+import fly.play.aws.Aws.AwsRequestHolder
 import fly.play.s3.{BucketFile, S3}
 import play.api.Logger
 import play.api.Play.current
@@ -18,21 +19,50 @@ object S3Controller extends Controller with ContentFeeding {
   lazy val bucket = s3.getBucket(Configuration.s3.bucketName)
 
   def multipartUploads = Action.async { request =>
+    val awsRequest: AwsRequestHolder = listMultipartUploads
 
+    awsRequest.get().map { response =>
+      response.status match {
+        case 200 => Ok(views.html.listMultipartUploads(Configuration.s3.bucketName,
+          extract(scala.xml.XML.loadString(response.body)).sortBy(_.uploadId)))
+
+        case _ => InternalServerError
+      }
+    }
+  }
+
+  def listMultipartUploads = {
     val url = "http://" + Configuration.s3.bucketName + "." + s3.host
 
     val awsRequest = s3.awsWithSigner
       .url(url)
       .withHeaders("Content-Type" -> "application/json")
       .withQueryString("uploads" -> "")
+    awsRequest
+  }
 
-    awsRequest.get.map { response =>
+  def removeMultipartUpload(upload: MultipartUpload): Future[String] = {
+    val url = s"http://${Configuration.s3.bucketName}.${s3.host}/${upload.key}"
+
+    val awsRequest = s3.awsWithSigner
+      .url(url)
+      .withQueryString("uploadId" -> upload.uploadId)
+
+    awsRequest.delete().map { response =>
       response.status match {
-        case 200 => {
-          Ok(views.html.listMultipartUploads(Configuration.s3.bucketName, extract(scala.xml.XML.loadString(response.body))))
-        }
+        case 204 => s"${upload.key} cleared"
+        case s => s"${upload.key} not cleared with status $s, ${response.body}"
+      }
+    }
+  }
 
-        case _ => InternalServerError
+  def clearMultipartUploads = Action.async { request =>
+    listMultipartUploads.get().flatMap { response =>
+      response.status match {
+        case 200 =>
+          val fs = extract(scala.xml.XML.loadString(response.body)).map(removeMultipartUpload)
+          Future.sequence(fs).map(results => Ok(results.mkString("\n")))
+        case _ => Future(InternalServerError)
       }
     }
   }

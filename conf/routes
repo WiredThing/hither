@@ -8,8 +8,9 @@ GET         /                                                                   
 GET         /repository/create/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                    controllers.RepositoryController.create(repo:Repository)
 GET         /repository/show/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                      controllers.RepositoryController.show(repo:Repository)
 
-GET         /multipartUploads                                                       controllers.S3Controller.multipartUploads
-GET         /removeOrphans                                                          controllers.S3Controller.removeOrphans
+GET         /multipart_uploads                                                       controllers.S3Controller.multipartUploads
+GET         /multipart_uploads/clear                                                 controllers.S3Controller.clearMultipartUploads
+GET         /remove_orphans                                                          controllers.S3Controller.removeOrphans
 
 GET         /v1/_ping                                                               controllers.StatusController.ping
 

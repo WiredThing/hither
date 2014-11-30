@@ -1,8 +1,21 @@
-@(bucketName:String, uploads:List[controllers.MultipartUpload])
+@(bucketName: String, uploads: List[controllers.MultipartUpload])
 
-@main(s"Uploads") {
+    @main(s"Incomplete Uploads for $bucketName") {
+        <h3>@{s"Incomplete Uploads for $bucketName"}</h3>
+        <table>
+            <thead>
+                <td>Path</td>
+                <td>Upload Id</td>
+            </thead>
+            <tbody>
+            @uploads.map { upload =>
+                <tr>
+                    <td>@upload.key</td>
+                    <td>@{s"${upload.uploadId.substring(0,40)}..."}</td>
+                </tr>
+            }
+            </tbody>
+        </table>
 
-    @uploads.map {upload =>
-       @{s"aws s3api abort-multipart-upload --bucket $bucketName --key ${upload.key} --upload-id ${upload.uploadId}"}<br>
+        <a href="/multipart_uploads/clear">Clear uploads</a>
     }
-}
