@@ -1,11 +1,12 @@
-@(repos:List[models.Repository])
+@(repos: List[models.Repository])
 
 @main("Repositories") {
 
-<ul>
-@repos.map { repo =>
-    <li><a href="/repository/show/@repo.qualifiedName">@repo.qualifiedName</li>
-  }
+    <ul>
+    @repos.map { repo =>
+        <li><a href="@routes.RepositoryController.show(repo)">@repo.qualifiedName</a></li>
+    }
+    </ul>
+    <br>
+    <a href="@routes.S3Controller.multipartUploads()">Show failed uploads</a>
 }
-</ul>
-

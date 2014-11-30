@@ -1,21 +1,25 @@
 @(bucketName: String, uploads: List[controllers.MultipartUpload])
 
     @main(s"Incomplete Uploads for $bucketName") {
-        <h3>@{s"Incomplete Uploads for $bucketName"}</h3>
+        <h3>@{
+            s"Incomplete Uploads for $bucketName"
+        }</h3>
         <table>
             <thead>
-                <td>Path</td>
-                <td>Upload Id</td>
+                <tr>
+                    <th>Path</th>
+                    <th>Upload Id</th>
+                </tr>
             </thead>
             <tbody>
             @uploads.map { upload =>
                 <tr>
                     <td>@upload.key</td>
-                    <td>@{s"${upload.uploadId.substring(0,40)}..."}</td>
+                    <td>@{ s"${upload.uploadId.substring(0, 40)}..."}</td>
                 </tr>
             }
             </tbody>
         </table>
 
-        <a href="/multipart_uploads/clear">Clear uploads</a>
+        <a href="@routes.S3Controller.clearMultipartUploads()">Clear uploads</a>
     }

@@ -2,9 +2,9 @@
 
 @main(s"Repository ${repo.qualifiedName}") {
 
-<ul>
+  <ul>
   @tags.map { tag =>
     <li>@tag.name</li>
   }
+  </ul>
 }
-</ul>
