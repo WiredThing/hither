@@ -2,11 +2,11 @@ import models._
 import play.api.mvc.PathBindable
 
 package object binders {
-  implicit def repoBinder = new PathBindable[Repository] {
+  implicit def repoBinder: PathBindable[Repository] = new PathBindable[Repository] {
     override def bind(key: String, value: String): Either[String, Repository] = {
       value.split("/").toList match {
-        case repoName :: Nil => Right(Repository(RepositoryName(repoName)))
-        case namespace :: repoName :: Nil => Right(Repository(Namespace(namespace), RepositoryName(repoName)))
+        case repoName +: Nil => Right(Repository(RepositoryName(repoName)))
+        case namespace +: repoName +: Nil => Right(Repository(Namespace(namespace), RepositoryName(repoName)))
         case _ => Left(s"Could not convert $value to a Repository")
       }
     }
@@ -19,7 +19,7 @@ package object binders {
     }
   }
 
-  implicit def imageIdBinder = new PathBindable[ImageId] {
+  implicit def imageIdBinder: PathBindable[ImageId] = new PathBindable[ImageId] {
     override def bind(key: String, value: String): Either[String, ImageId] =
       implicitly[PathBindable[String]].bind(key, value).fold(
         left => Left(left),
