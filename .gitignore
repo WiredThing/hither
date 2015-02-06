@@ -16,3 +16,4 @@ dist
 localRegistry
 Dockerfile
 *~
+atlassian-ide-plugin.xml
