@@ -1,10 +1,11 @@
 package controllers
 
-import fly.play.aws.Aws.AwsRequestHolder
-import fly.play.s3.{BucketFile, S3}
+import fly.play.aws.{Aws4Signer, AwsCredentials}
+import fly.play.s3.{S3, S3Client, S3Configuration}
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.ws.{WS, WSProxyServer, WSRequestHolder}
 import play.api.mvc.{Action, Controller}
 import system.Configuration
 
@@ -13,13 +14,32 @@ import scala.xml.Elem
 
 case class MultipartUpload(key: String, uploadId: String)
 
+class HitherS3Signer(credentials: AwsCredentials, region: String, proxy: Option[WSProxyServer])
+  extends Aws4Signer(credentials, "s3", region) {
+
+  private def addProxy(request: WSRequestHolder): WSRequestHolder = {
+    proxy.map { p =>
+      Logger.debug("Adding proxy to request")
+      request.withProxyServer(p)
+    }.getOrElse(request)
+  }
+
+  // allways include the content payload header
+  override def sign(request: WSRequestHolder, method: String, body: Array[Byte]): WSRequestHolder =
+    super.sign(addProxy(request.withHeaders(amzContentSha256(body))), method, body)
+
+}
+
 object S3Controller extends Controller with ContentFeeding {
-  lazy val s3 = S3.fromConfig
+  lazy val s3Config = S3Configuration.fromConfig
+  lazy val s3Client = new S3Client(WS.client, new HitherS3Signer(s3Config.credentials, s3Config.region, Configuration.aws.proxy), s3Config)
+
+  lazy val s3 = new S3(s3Client)
 
   lazy val bucket = s3.getBucket(Configuration.s3.bucketName)
 
   def multipartUploads = Action.async { request =>
-    val awsRequest: AwsRequestHolder = listMultipartUploads
+    val awsRequest = listMultipartUploads
 
     awsRequest.get().map { response =>
       response.status match {
@@ -31,21 +51,16 @@ object S3Controller extends Controller with ContentFeeding {
     }
   }
 
-  def listMultipartUploads = {
-    val url = "http://" + Configuration.s3.bucketName + "." + s3.host
-
-    val awsRequest = s3.awsWithSigner
-      .url(url)
+  def listMultipartUploads =
+    s3Client.resourceRequest(Configuration.s3.bucketName, "")
       .withHeaders("Content-Type" -> "application/json")
       .withQueryString("uploads" -> "")
-    awsRequest
-  }
+
 
   def removeMultipartUpload(upload: MultipartUpload): Future[String] = {
-    val url = s"http://${Configuration.s3.bucketName}.${s3.host}/${upload.key}"
+    val url = s"http://${Configuration.s3.bucketName}.${s3Config.host}/${upload.key}"
 
-    val awsRequest = s3.awsWithSigner
-      .url(url)
+    val awsRequest = s3Client.resourceRequest(Configuration.s3.bucketName, upload.key)
       .withQueryString("uploadId" -> upload.uploadId)
 
     awsRequest.delete().map { response =>

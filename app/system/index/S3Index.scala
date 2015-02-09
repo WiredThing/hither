@@ -1,6 +1,6 @@
 package system.index
 
-import fly.play.s3.{BucketFile, S3}
+import fly.play.s3.{S3Client, BucketFile, S3}
 import models._
 import play.api.LoggerLike
 import play.api.libs.iteratee.{Enumerator, Iteratee}
@@ -14,7 +14,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait S3Index extends Index {
   def bucketName: String
 
-  def s3: S3
+  lazy val s3 = new S3(s3Client)
+
+  def s3Client: S3Client
 
   def logger: LoggerLike
 
