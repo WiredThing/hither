@@ -1,12 +1,12 @@
 package controllers
 
 import fly.play.aws.{Aws4Signer, AwsCredentials}
-import fly.play.s3.{S3, S3Client, S3Configuration}
+import fly.play.s3.{BucketItem, S3, S3Client, S3Configuration}
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.{WS, WSProxyServer, WSRequestHolder}
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{Flash, Action, Controller}
 import system.Configuration
 
 import scala.concurrent.Future
@@ -38,7 +38,7 @@ object S3Controller extends Controller with ContentFeeding {
 
   lazy val bucket = s3.getBucket(Configuration.s3.bucketName)
 
-  def multipartUploads = Action.async { request =>
+  def multipartUploads = Action.async { implicit request =>
     val awsRequest = listMultipartUploads
 
     awsRequest.get().map { response =>
@@ -71,12 +71,15 @@ object S3Controller extends Controller with ContentFeeding {
     }
   }
 
-  def clearMultipartUploads = Action.async { request =>
+  def clearMultipartUploads = Action.async { implicit request =>
     listMultipartUploads.get().flatMap { response =>
       response.status match {
         case 200 =>
           val fs = extract(scala.xml.XML.loadString(response.body)).map(removeMultipartUpload)
-          Future.sequence(fs).map(results => Ok(results.mkString("\n")))
+          Future.sequence(fs).map { results =>
+            val flash = Flash(Map(results.map("success" -> _): _*))
+            Redirect(routes.RepositoryController.repositories).flashing(flash)
+          }
         case _ => Future(InternalServerError)
       }
     }
@@ -90,18 +93,38 @@ object S3Controller extends Controller with ContentFeeding {
     }
   }
 
-  def removeOrphans = Action.async { request =>
+  /**
+   * Removes layer directories in the S3 bucket that do not have a 'layer' entry in them
+   */
+  def removeIncomplete = Action.async { implicit request =>
     bucket.list(Configuration.s3.registryRoot + "/").flatMap { layerIds =>
-      val orphanedLayers = layerIds.toList.map { layerId =>
-        bucket.list(Configuration.s3.registryRoot + "/" + layerId + "/").map { items =>
-          val entries = items.map(_.name.split("/").last).toList
-          if (!entries.contains("layer")) Some(layerId) else None
+      Logger.debug(s"There are ${layerIds.toList.length} layers in the registry")
+
+      val f = layerIds.foldLeft(Future[List[BucketItem]](List())) { case (f, layerItem) =>
+        f.flatMap { acc =>
+          bucket.list(layerItem.name).map { items =>
+            val entries = items.map(_.name.split("/").last).toList
+            if (!entries.contains("layer")) {
+              Logger.debug(s"Layer ${layerItem.name} is incomplete")
+              layerItem +: acc
+            } else acc
+          }
         }
       }
 
-      Future.sequence(orphanedLayers).map(_.flatten.map(_.name)).map { orphans =>
-        orphans.foreach(layerId => bucket.remove(Configuration.s3.registryRoot + "/" + layerId + "/"))
-        Ok(views.html.listRemovedOrphans(bucket.name, orphans))
+      f.map { incompletes =>
+        Logger.debug(s"Found ${incompletes.length} incomplete layers. Removing....")
+        incompletes.foreach { layerId =>
+          Logger.debug(s"Removing layer $layerId")
+          bucket.list(layerId.name).map { items =>
+            items.foldLeft(Future[Unit](Unit)) { case (f, i) =>
+              bucket.remove(i.name)
+            }
+          }.map { _ =>
+            bucket.remove(layerId.name)
+          }
+        }
+        Redirect(routes.RepositoryController.repositories).flashing("success" -> s"Removed ${incompletes.length} incomplete layers from ${bucket.name}")
       }
     }
   }

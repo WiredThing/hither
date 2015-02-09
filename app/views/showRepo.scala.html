@@ -1,4 +1,4 @@
-@(repo:models.Repository, tags:List[models.Tag])
+@(repo:models.Repository, tags:List[models.Tag])(implicit flash: Flash)
 
 @main(s"Repository ${repo.qualifiedName}") {
 

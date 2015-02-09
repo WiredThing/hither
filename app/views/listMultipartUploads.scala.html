@@ -1,4 +1,4 @@
-@(bucketName: String, uploads: List[controllers.MultipartUpload])
+@(bucketName: String, uploads: List[controllers.MultipartUpload])(implicit flash: Flash)
 
     @main(s"Incomplete Uploads for $bucketName") {
         <h3>@{

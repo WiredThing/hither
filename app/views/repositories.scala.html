@@ -1,4 +1,4 @@
-@(repos: Iterable[models.Repository])
+@(repos: Iterable[models.Repository])(implicit flash: Flash)
 
 @main("Repositories") {
 
@@ -9,4 +9,5 @@
     </ul>
     <br>
     <a href="@routes.S3Controller.multipartUploads()">Show failed uploads</a>
+    <a href="@routes.S3Controller.removeIncomplete()">Remove incomplete layers</a>
 }

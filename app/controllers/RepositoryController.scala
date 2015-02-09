@@ -22,13 +22,13 @@ trait RepositoryController extends Controller {
 
   def logger: LoggerLike
 
-  def repositories = Action.async { request =>
+  def repositories = Action.async { implicit request =>
     index.repositories.map { repos =>
       Ok(views.html.repositories(repos))
     }
   }
 
-  def show(repo: Repository) = Action.async { request =>
+  def show(repo: Repository) = Action.async { implicit request =>
     index.exists(repo).flatMap {
       case true => index.tagSet(repo).map { tags =>
         Ok(views.html.showRepo(repo, tags.toList.sortWith((a, b) => a.name < b.name)))
@@ -38,6 +38,6 @@ trait RepositoryController extends Controller {
   }
 
   def create(repo: Repository) = Action.async { implicit request =>
-    index.create(repo).map(_ => Redirect(routes.RepositoryController.repositories))
+    index.create(repo).map(_ => Redirect(routes.RepositoryController.repositories).flashing("success" -> s"Created ${repo.qualifiedName}"))
   }
 }

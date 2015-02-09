@@ -1,4 +1,4 @@
-@(repo: models.Repository)
+@(repo: models.Repository)(implicit flash: Flash)
 
 @main(s"No repository: ${repo.qualifiedName}") {
     There is no existing repository called @repo.qualifiedName.

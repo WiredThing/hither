@@ -10,7 +10,7 @@ GET         /repository/show/$repo<[a-z0-9_-]+(/[a-z0-9_-]+)?>                  
 
 GET         /multipart_uploads                                                       controllers.S3Controller.multipartUploads
 GET         /multipart_uploads/clear                                                 controllers.S3Controller.clearMultipartUploads
-GET         /remove_orphans                                                          controllers.S3Controller.removeOrphans
+GET         /remove_incomplete                                                          controllers.S3Controller.removeIncomplete
 
 GET         /v1/_ping                                                               controllers.StatusController.ping
 
