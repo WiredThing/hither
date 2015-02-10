@@ -2,15 +2,15 @@ package controllers
 
 import fly.play.aws.{Aws4Signer, AwsCredentials}
 import fly.play.s3.{BucketItem, S3, S3Client, S3Configuration}
-import models.{Repository, ImageId}
-import play.api.libs.json.JsArray
-import play.api.{Application, Logger}
+import models.ImageId
+import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.JsArray
 import play.api.libs.ws.{WS, WSProxyServer, WSRequestHolder}
-import play.api.mvc.{Flash, Action, Controller}
+import play.api.mvc.{Action, Controller, Flash}
 import system.index.S3Index
-import system.{Production, Configuration}
+import system.{Configuration, Production}
 
 import scala.concurrent.Future
 import scala.xml.Elem
@@ -98,7 +98,7 @@ object S3Controller extends Controller with ContentFeeding {
 
   private def trimQuotes(s: String): String = {
     if (s.startsWith("\"")) trimQuotes(s.substring(1))
-    else if (s.startsWith(("'"))) trimQuotes(s.substring(1))
+    else if (s.startsWith("'")) trimQuotes(s.substring(1))
     else if (s.endsWith("\"")) trimQuotes(s.substring(0, s.length - 1))
     else if (s.endsWith("'")) trimQuotes(s.substring(0, s.length - 1))
     else s
@@ -108,7 +108,7 @@ object S3Controller extends Controller with ContentFeeding {
     val registry = Production.s3Registry
     registry.ancestry(imageId).flatMap {
       case Some(ce) => ce.asJson.map {
-        case JsArray(ids) => ids.map(id => ImageId(trimQuotes(id.toString))).toSet
+        case JsArray(ids) => ids.map(id => ImageId(trimQuotes(id.toString()))).toSet
         case _ => Logger.debug(s"Ancestry for $imageId was not a JsArray!"); Set()
       }
       case None => Future(Set())
@@ -134,7 +134,7 @@ object S3Controller extends Controller with ContentFeeding {
     }
   }
 
-  def removeOrphanedLayers = Action.async { implicit request =>
+  def removeOrphanedLayers() = Action.async { implicit request =>
     for {
       indexed <- listIndexedLayers
       all <- listAllLayers
@@ -152,7 +152,7 @@ object S3Controller extends Controller with ContentFeeding {
   /**
    * Removes layer directories in the S3 bucket that do not have a 'layer' entry in them
    */
-  def removeIncomplete = Action.async { implicit request =>
+  def removeIncomplete() = Action.async { implicit request =>
     findIncompletes.map { incompletes =>
       incompletes.map(i => ImageId(i.name.split("/").last)).foreach(removeLayer)
       Redirect(routes.RepositoryController.repositories).flashing("success" -> s"Removed ${incompletes.length} incomplete layers from ${bucket.name}")
