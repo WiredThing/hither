@@ -2,12 +2,15 @@ package controllers
 
 import fly.play.aws.{Aws4Signer, AwsCredentials}
 import fly.play.s3.{BucketItem, S3, S3Client, S3Configuration}
-import play.api.Logger
+import models.{Repository, ImageId}
+import play.api.libs.json.JsArray
+import play.api.{Application, Logger}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.{WS, WSProxyServer, WSRequestHolder}
 import play.api.mvc.{Flash, Action, Controller}
-import system.Configuration
+import system.index.S3Index
+import system.{Production, Configuration}
 
 import scala.concurrent.Future
 import scala.xml.Elem
@@ -51,13 +54,13 @@ object S3Controller extends Controller with ContentFeeding {
     }
   }
 
-  def listMultipartUploads =
+  private def listMultipartUploads =
     s3Client.resourceRequest(Configuration.s3.bucketName, "")
       .withHeaders("Content-Type" -> "application/json")
       .withQueryString("uploads" -> "")
 
 
-  def removeMultipartUpload(upload: MultipartUpload): Future[String] = {
+  private def removeMultipartUpload(upload: MultipartUpload): Future[String] = {
     val url = s"http://${Configuration.s3.bucketName}.${s3Config.host}/${upload.key}"
 
     val awsRequest = s3Client.resourceRequest(Configuration.s3.bucketName, upload.key)
@@ -85,7 +88,7 @@ object S3Controller extends Controller with ContentFeeding {
     }
   }
 
-  def extract(xml: Elem): List[MultipartUpload] = {
+  private def extract(xml: Elem): List[MultipartUpload] = {
     (xml \ "Upload").iterator.toList.map { node =>
       (node \ "Key", node \ "UploadId") match {
         case (key, uploadId) => MultipartUpload(key.text, uploadId.text)
@@ -93,38 +96,95 @@ object S3Controller extends Controller with ContentFeeding {
     }
   }
 
+  private def trimQuotes(s: String): String = {
+    if (s.startsWith("\"")) trimQuotes(s.substring(1))
+    else if (s.startsWith(("'"))) trimQuotes(s.substring(1))
+    else if (s.endsWith("\"")) trimQuotes(s.substring(0, s.length - 1))
+    else if (s.endsWith("'")) trimQuotes(s.substring(0, s.length - 1))
+    else s
+  }
+
+  private def ancestryFor(imageId: ImageId): Future[Set[ImageId]] = {
+    val registry = Production.s3Registry
+    registry.ancestry(imageId).flatMap {
+      case Some(ce) => ce.asJson.map {
+        case JsArray(ids) => ids.map(id => ImageId(trimQuotes(id.toString))).toSet
+        case _ => Logger.debug(s"Ancestry for $imageId was not a JsArray!"); Set()
+      }
+      case None => Future(Set())
+    }
+  }
+
+  private def listIndexedLayers: Future[Set[ImageId]] = {
+    val index: S3Index = Production.s3Index
+    val headImages = index.repositories.flatMap { repos =>
+      repos.foldLeft(Future(Set[ImageId]())) { case (f, repo) =>
+        f.flatMap { imageIds =>
+          index.tagSet(repo).map { tags =>
+            tags.map(_.version) ++ imageIds
+          }
+        }
+      }
+    }
+
+    headImages.flatMap { imageIds =>
+      imageIds.foldLeft(Future(Set[ImageId]())) { case (f, i) =>
+        f.flatMap(acc => ancestryFor(i).map(_ ++ acc))
+      }
+    }
+  }
+
+  def removeOrphanedLayers = Action.async { implicit request =>
+    for {
+      indexed <- listIndexedLayers
+      all <- listAllLayers
+      toRemove = all -- indexed
+      _ <- removeLayers(toRemove)
+    } yield {
+      Redirect(routes.RepositoryController.repositories).flashing("success" -> s"Found ${indexed.size} layers in the index. ${all.size} layers in total. Removed ${toRemove.size}")
+    }
+  }
+
+  private def listAllLayers: Future[Set[ImageId]] = {
+    bucket.list(Configuration.s3.registryRoot + "/").map(_.map(item => ImageId(item.name.split("/").last)).toSet)
+  }
+
   /**
    * Removes layer directories in the S3 bucket that do not have a 'layer' entry in them
    */
   def removeIncomplete = Action.async { implicit request =>
-    bucket.list(Configuration.s3.registryRoot + "/").flatMap { layerIds =>
-      Logger.debug(s"There are ${layerIds.toList.length} layers in the registry")
+    findIncompletes.map { incompletes =>
+      incompletes.map(i => ImageId(i.name.split("/").last)).foreach(removeLayer)
+      Redirect(routes.RepositoryController.repositories).flashing("success" -> s"Removed ${incompletes.length} incomplete layers from ${bucket.name}")
+    }
+  }
 
-      val f = layerIds.foldLeft(Future[List[BucketItem]](List())) { case (f, layerItem) =>
+  private def removeLayers(layerIds: Set[ImageId]): Future[Unit] = {
+    layerIds.foldLeft(Future[Unit](Unit)) { case (f, layerId) =>
+      f.flatMap(_ => removeLayer(layerId))
+    }
+  }
+
+  private def removeLayer(layerId: ImageId): Future[Unit] = {
+    Logger.debug(s"Removing layer $layerId")
+    val layerPath: String = Configuration.s3.registryRoot + "/" + layerId.id + "/"
+
+    bucket.list(layerPath).map {
+      _.foldLeft(Future[Unit](Unit)) { case (f, i) =>
+        bucket.remove(i.name)
+      }
+    }.flatMap(_ => bucket.remove(layerPath))
+  }
+
+  private def findIncompletes: Future[List[BucketItem]] = {
+    bucket.list(Configuration.s3.registryRoot + "/").flatMap { layerIds =>
+      layerIds.foldLeft(Future[List[BucketItem]](List())) { case (f, layerItem) =>
         f.flatMap { acc =>
           bucket.list(layerItem.name).map { items =>
             val entries = items.map(_.name.split("/").last).toList
-            if (!entries.contains("layer")) {
-              Logger.debug(s"Layer ${layerItem.name} is incomplete")
-              layerItem +: acc
-            } else acc
+            if (!entries.contains("layer")) layerItem +: acc else acc
           }
         }
-      }
-
-      f.map { incompletes =>
-        Logger.debug(s"Found ${incompletes.length} incomplete layers. Removing....")
-        incompletes.foreach { layerId =>
-          Logger.debug(s"Removing layer $layerId")
-          bucket.list(layerId.name).map { items =>
-            items.foldLeft(Future[Unit](Unit)) { case (f, i) =>
-              bucket.remove(i.name)
-            }
-          }.map { _ =>
-            bucket.remove(layerId.name)
-          }
-        }
-        Redirect(routes.RepositoryController.repositories).flashing("success" -> s"Removed ${incompletes.length} incomplete layers from ${bucket.name}")
       }
     }
   }

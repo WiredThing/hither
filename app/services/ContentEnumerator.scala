@@ -1,5 +1,6 @@
 package services
 
+import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsValue, Json, Reads}
 
@@ -11,10 +12,11 @@ case class ContentEnumerator(content: Enumerator[Array[Byte]], contentType: Stri
 
   def asJson(implicit ctx: ExecutionContext): Future[JsValue] = asString.map(Json.parse)
 
-  def parseJson[A](implicit ctx: ExecutionContext, reads:Reads[A]): Future[A] = asJson.map(_.as[A])
+  def parseJson[A](implicit ctx: ExecutionContext, reads: Reads[A]): Future[A] = asJson.map(_.as[A])
 }
 
 object ContentEnumerator {
+
   import java.io.ByteArrayInputStream
 
   def apply(js: JsValue)(implicit ctx: ExecutionContext): ContentEnumerator = {
