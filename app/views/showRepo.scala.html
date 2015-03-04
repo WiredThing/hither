@@ -1,10 +1,15 @@
-@(repo:models.Repository, tags:List[models.Tag])(implicit flash: Flash)
+@(repo: models.Repository, tags: List[models.Tag])(implicit flash: Flash)
 
 @main(s"Repository ${repo.qualifiedName}") {
 
-  <ul>
-  @tags.map { tag =>
-    <li>@tag.name</li>
-  }
-  </ul>
+    <table>
+        <thead>
+            <tr><th>Tag</th><th>Image Id</th></tr>
+        </thead>
+        <tbody>
+        @tags.map { tag =>
+            <tr><td>@tag.name</td><td>@tag.version.id.substring(0, 16)</td>
+        }
+        </tbody>
+    </table>
 }
