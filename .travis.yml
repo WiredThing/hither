@@ -7,3 +7,7 @@ jdk:
 notifications:
   slack: wiredthing:9yCkEewMVqrhdLBVyNvTp2OD
 
+branches:
+	only:
+		- master
+		- dev
