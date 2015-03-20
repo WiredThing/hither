@@ -1,13 +1,13 @@
 language: scala
 scala:
-  - "2.11.6"
+- 2.11.6
 jdk:
-  - oraclejdk7
-  - openjdk7
+- oraclejdk7
+- openjdk7
 notifications:
-  slack: wiredthing:9yCkEewMVqrhdLBVyNvTp2OD
-
+  slack:
+    secure: k1uDQic/EfdBQph7G3PEHF9ejP77f2jkeL4Fp9MvN0abkbdDE55SpYMU3HBTKnL3heiNPwwg5LnJbJ6eXtSZSGNwlgQbBRCuv+kMuIrsHJpbpN9fw6kVzj5dCS6pikYt7ZKFEZvpz8x7dI+Hz9TfWqpKz5Z9oitP3vWCagCSw/I=
 branches:
- only:
+  only:
   - master
   - dev
