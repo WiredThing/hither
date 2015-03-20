@@ -1,6 +1,6 @@
 package system.index
 
-import fly.play.s3.{BucketFile, BucketItem, S3}
+import fly.play.s3.{S3Client, BucketFile, S3}
 import models._
 import play.api.LoggerLike
 import play.api.libs.iteratee.{Enumerator, Iteratee}
@@ -14,7 +14,9 @@ import scala.concurrent.{ExecutionContext, Future}
 trait S3Index extends Index {
   def bucketName: String
 
-  def s3: S3
+  lazy val s3 = new S3(s3Client)
+
+  def s3Client: S3Client
 
   def logger: LoggerLike
 
@@ -22,23 +24,24 @@ trait S3Index extends Index {
 
   implicit def app: play.api.Application
 
-  override def repositories(implicit ctx: ExecutionContext): Future[List[Repository]] = {
+  override def repositories(implicit ctx: ExecutionContext): Future[Iterable[Repository]] = {
     val index: String = s"${Configuration.s3.indexRoot}"
 
     bucket.list(s"$index/").flatMap { nsItems =>
-      val repoFutures = nsItems.toList.map { nsItem =>
-        bucket.list(s"${nsItem.name}").map { repoItems =>
-          repoItems.toList.map { repoItem =>
-            Repository(Namespace(nsItem.name.split("/").last), RepositoryName(repoItem.name.split("/").last))
+      Future.sequence {
+        nsItems.map { nsItem =>
+          bucket.list(s"${nsItem.name}").map { repoItems =>
+            repoItems.map { repoItem =>
+              Repository(Namespace(nsItem.name.split("/").last), RepositoryName(repoItem.name.split("/").last))
+            }
           }
         }
-      }
-      Future.sequence(repoFutures).map(_.flatten)
+      }.map(_.flatten)
     }
   }
 
   override def exists(repo: Repository)(implicit ctx: ExecutionContext): Future[Boolean] = {
-    repositories.map(_.contains(repo))
+    repositories.map(_.exists(_ == repo))
   }
 
   override def create(repo: Repository)(implicit ctx: ExecutionContext): Future[Unit] = {
@@ -60,10 +63,11 @@ trait S3Index extends Index {
 
     bucket.list(tagsDir).flatMap { items =>
       logger.info(s"got tags $items")
-      val tagEntries = items.map { item =>
-        bucket.get(item.name).map(bf => Tag(bf.name.split("/").last, ImageId(new String(bf.content))))
+      Future.sequence {
+        items.map { item =>
+          bucket.get(item.name).map(bf => Tag(bf.name.split("/").last, ImageId(new String(bf.content))))
+        }.toSet
       }
-      Future.sequence(tagEntries.toSet)
     }
   }
 
@@ -78,7 +82,7 @@ trait S3Index extends Index {
   override def tagsStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
     tagSet(repo).map { tags =>
       val tagMap = Map(tags.toSeq.map(t => t.name -> t.version): _*)
-      val jsonBytes = Json.prettyPrint(Json.toJson(tagMap)).getBytes()
+      val jsonBytes = Json.prettyPrint(Json.toJson(tagMap)).getBytes
       Some(ContentEnumerator(Enumerator(jsonBytes), "application/json", Some(jsonBytes.length)))
     }.recover {
       case t => logger.error("", t); None

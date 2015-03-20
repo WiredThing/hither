@@ -1,4 +1,4 @@
-FROM wiredthing/oraclejdk:7u60
+FROM wiredthing/oraclejdk:7u72
 MAINTAINER Doug Clinton <doug@wiredthing.com>
 
 VOLUME ["/tmp/work"]

@@ -8,7 +8,7 @@ import system.registry.ResourceType
 import scala.concurrent.{ExecutionContext, Future}
 
 trait Index {
-  def repositories(implicit ctx: ExecutionContext): Future[List[Repository]]
+  def repositories(implicit ctx: ExecutionContext): Future[Iterable[Repository]]
 
   def exists(repo: Repository)(implicit ctx: ExecutionContext): Future[Boolean]
 

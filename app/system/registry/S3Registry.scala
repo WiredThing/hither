@@ -1,6 +1,6 @@
 package system.registry
 
-import fly.play.s3.{S3Response, BucketFile, S3}
+import fly.play.s3.{BucketFile, S3, S3Client}
 import models.ImageId
 import play.api.LoggerLike
 import play.api.libs.iteratee._
@@ -19,7 +19,9 @@ trait S3Registry extends PrivateRegistry {
 
   lazy val bucket = s3.getBucket(bucketName)
 
-  def s3: S3
+  def s3Client: S3Client
+
+  def s3 = new S3(s3Client)
 
   def logger: LoggerLike
 
@@ -45,7 +47,6 @@ trait S3Registry extends PrivateRegistry {
     } yield l
   }
 
-
   override def resourceExists(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Boolean] = {
     logger.debug(s"Checking if ${resourceType.name} exists for image ${imageId.id}")
     bucket.list(s"${Configuration.s3.registryRoot}/${imageId.id}/").map { entries =>
@@ -55,7 +56,7 @@ trait S3Registry extends PrivateRegistry {
   }
 
   override def findResource(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = {
-    val ws = s3.awsWithSigner.url(httpUrl(bucketName, s3.host, pathName(imageId, resourceType))).sign("GET")
+    val ws = s3Client.resourceRequest(bucketName, pathName(imageId, resourceType))
 
     ws.withRequestTimeout((10 minutes).toMillis.toInt).getStream().map {
       case (headers, e) if headers.status == 200 => Some(ContentEnumerator(e, resourceType.contentType, headers.contentLength))
@@ -73,7 +74,6 @@ trait S3Registry extends PrivateRegistry {
       }
     }
   }
-
 
   override def sinkFor(imageId: ImageId, resourceType: ResourceType, contentLength: Option[Long])(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Unit] = {
     val fileName = pathName(imageId, resourceType)
