@@ -2,7 +2,9 @@ package models
 
 import play.api.libs.json._
 
-case class ImageId(id: String) extends AnyVal
+case class ImageId(id: String) {
+  assert(!id.startsWith("\""))
+}
 
 object ImageId {
   implicit val formats = new Format[ImageId] {
