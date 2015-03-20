@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/WiredThing/hither.svg?branch=master)](https://travis-ci.org/WiredThing/hither)
+
 docker-registry
 ===============
 
