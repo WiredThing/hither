@@ -1,7 +1,6 @@
 package controllers
 
-import play.api.mvc.Result
-import play.api.mvc.Controller
+import play.api.mvc.{Controller, Result}
 import services.ContentEnumerator
 
 trait ContentFeeding {
