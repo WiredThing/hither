@@ -2,14 +2,10 @@ package system
 
 import controllers.HitherS3Signer
 import fly.play.s3.{S3Client, S3Configuration}
-import models.Repository
 import play.api.libs.ws.WS
 import play.api.{Application, Logger}
-import services.ContentEnumerator
-import system.index.{FileBasedIndex, S3Index}
+import system.index.S3Index
 import system.registry.{Registry, S3Registry}
-
-import scala.concurrent.{ExecutionContext, Future}
 
 object Production {
 
@@ -27,24 +23,15 @@ object Production {
     override lazy val logger = Logger
   }
 
-  lazy val fileIndex = new FileBasedIndex {
-    override def imagesStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = ???
-
-    override def tag(repo: Repository, tagName: String)(implicit ctx: ExecutionContext): Future[Option[String]] = ???
-
-    override def writeTag(repo: Repository, tagName: String, value: String)(implicit ctx: ExecutionContext): Future[Unit] = ???
-
-    override def tagsStream(repo: Repository)(implicit ctx: ExecutionContext): Future[Option[ContentEnumerator]] = ???
-  }
 
   lazy val index = Configuration.hither.storage match {
     case "s3" => s3Index
-    case "file" => fileIndex
+    case s => throw new IllegalArgumentException(s"Don't recognise storage type '$s'")
   }
 
   lazy val s3Registry = new S3Registry {
 
-    override implicit def app = play.api.Play.current
+    override implicit def app: Application = play.api.Play.current
 
     override val bucketName: String = Configuration.s3.bucketName
 
@@ -64,13 +51,12 @@ object Production {
   }
 
   def obfuscate(s: String, show: Int = 3): String = {
-    val hide = if (s.length > show) (s.length - show) else s.length
+    val hide = if (s.length > show) s.length - show else s.length
     List.fill(hide)('*').mkString + s.substring(hide)
   }
 
   lazy val registry: Registry = Configuration.hither.storage match {
     case "s3" => s3Registry
-    case "file" => throw new UnsupportedOperationException("File storage is not yet supported")
     case s => throw new IllegalArgumentException(s"Don't recognise storage type '$s'")
   }
 
