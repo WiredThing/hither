@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/WiredThing/hither.svg?branch=master)](https://travis-ci.org/WiredThing/hither)
+[![Codacy Badge](https://www.codacy.com/project/badge/ea1fbbdc3b7642b7abbf4fcd5a108399)](https://www.codacy.com/public/doug/hither)
 
 docker-registry
 ===============
