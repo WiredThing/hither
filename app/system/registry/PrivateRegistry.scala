@@ -57,12 +57,10 @@ trait AncestryBuilder {
   }
 
   def prependImageId(imageId: ImageId, ce: ContentEnumerator)(implicit ctx: ExecutionContext): Future[ContentEnumerator] = {
-    try {
-      for {
-        ancestry <- ce.parseJson[Ancestry]
-      } yield ContentEnumerator(Json.toJson(imageId.id +: ancestry))
-    } catch {
-      case jre: JsResultException => Logger.error(s"Could not parse json into id list", jre); throw jre
-    }
+    val f = ce.parseJson[Ancestry] map { ancestry => ContentEnumerator(Json.toJson(imageId.id +: ancestry)) }
+
+    f.onFailure { case jre: JsResultException => Logger.error(s"Could not parse json into id list", jre); throw jre }
+
+    f
   }
 }
