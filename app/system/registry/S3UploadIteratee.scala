@@ -1,5 +1,7 @@
 package system.registry
 
+import play.api.libs.ws.WSResponse
+
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -8,6 +10,23 @@ import play.api.Logger
 import play.api.libs.iteratee._
 import fly.play.s3._
 
+trait MultipartUploader {
+  def uploadPart(part: BucketFilePart)(implicit ec: ExecutionContext): Future[BucketFilePartUploadTicket]
+
+  def abortMultipartUpload(implicit ec: ExecutionContext): Future[Unit]
+
+  def completeMultipartUpload(partUploadTickets: Seq[BucketFilePartUploadTicket])(implicit ec: ExecutionContext): Future[WSResponse]
+}
+
+case class BucketUploader(bucket: Bucket, ticket: BucketFileUploadTicket) extends MultipartUploader {
+  override def uploadPart(part: BucketFilePart)(implicit ec: ExecutionContext): Future[BucketFilePartUploadTicket] =
+    bucket.uploadPart(ticket, part)
+
+  override def completeMultipartUpload(partUploadTickets: Seq[BucketFilePartUploadTicket])(implicit ec: ExecutionContext): Future[WSResponse] =
+    bucket.s3.completeMultipartUpload(bucket.name, ticket, partUploadTickets)
+
+  override def abortMultipartUpload(implicit ec: ExecutionContext): Future[Unit] = bucket.abortMultipartUpload(ticket)
+}
 
 object S3UploadIteratee {
 
@@ -29,40 +48,30 @@ object S3UploadIteratee {
     val zero = DataLength(0)
   }
 
+  val FIVE_MEG: Int = 5 * 1024 * 1024
+
   def apply(bucket: Bucket, ticket: BucketFileUploadTicket)(implicit ctx: ExecutionContext): StepFunction = {
-    def step(partNumber: PartNumber, totalSize: DataLength, accumulatedChunks: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]])(i: Input[Array[Byte]]): Iteratee[Array[Byte], Unit] = i match {
-      case Input.EOF => handleEOF(bucket, ticket, partNumber, totalSize, accumulatedChunks, uploadTickets)
-      case Input.El(bytes) => handleEl(bucket, ticket, step, partNumber, totalSize, accumulatedChunks, uploadTickets, bytes)
-      case Input.Empty => Cont[Array[Byte], Unit](i => step(partNumber, totalSize, accumulatedChunks, uploadTickets)(i))
+    val uploader = new BucketUploader(bucket, ticket)
+    def step(partNumber: PartNumber, totalSize: DataLength, accumulatedBytes: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]])(i: Input[Array[Byte]]): Iteratee[Array[Byte], Unit] = i match {
+      case Input.EOF => handleEOF(uploader, partNumber, totalSize, accumulatedBytes, uploadTickets)
+      case Input.El(bytes) => handleEl(uploader, step, partNumber, totalSize, accumulatedBytes ++ bytes, uploadTickets)
+      case Input.Empty => Cont[Array[Byte], Unit](i => step(partNumber, totalSize, accumulatedBytes, uploadTickets)(i))
     }
 
     step
   }
 
-  def handleEl(bucket: Bucket,
-               ticket: BucketFileUploadTicket,
+  def handleEl(uploader: MultipartUploader,
                step: StepFunction,
                partNumber: PartNumber,
                totalSize: DataLength,
                accumulatedBytes: Array[Byte],
-               uploadTickets: Future[List[BucketFilePartUploadTicket]],
-               bytes: Array[Byte])(implicit ec: ExecutionContext): Iteratee[Array[Byte], Unit] = {
-    val chunk = accumulatedBytes ++ bytes
-    if (chunk.length >= 5 * 1024 * 1024) {
-      Logger.info(s"Got Input for part $partNumber with ${chunk.length} bytes of data. Total so far is ${totalSize.add(chunk.length)}")
+               uploadTickets: Future[List[BucketFilePartUploadTicket]])
+              (implicit ec: ExecutionContext): Iteratee[Array[Byte], Unit] = {
+    Logger.info(s"Got Input for part $partNumber with ${accumulatedBytes.length} bytes of data. Total so far is ${totalSize.add(accumulatedBytes.length)}")
 
-      val f = uploadTickets.flatMap { ts =>
-        Logger.info(s"Pushing part $partNumber with ${chunk.length} bytes. $totalSize bytes uploaded so far")
-        bucket.uploadPart(ticket, BucketFilePart(partNumber.n, chunk)).map { t =>
-          t +: ts
-        }
-      }
-
-      f.onFailure {
-        case e =>
-          Logger.error("Error during upload of chunk, aborting multipart upload", e)
-          bucket.abortMultipartUpload(ticket)
-      }
+    if (accumulatedBytes.length >= FIVE_MEG) {
+      val f: Future[List[BucketFilePartUploadTicket]] = uploadPart(uploader, partNumber, totalSize, accumulatedBytes, uploadTickets)
 
       // Controversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
       // then the iteratee will happily consume all the incoming data and buffer it up in memory,
@@ -72,14 +81,32 @@ object S3UploadIteratee {
       // context, perhaps?
       Await.result(f, 10 minutes)
 
-      Cont[Array[Byte], Unit](i => step(partNumber.inc, totalSize.add(chunk.length), Array(), f)(i))
+      Cont[Array[Byte], Unit](i => step(partNumber.inc, totalSize.add(accumulatedBytes.length), Array(), f)(i))
     } else {
-      Cont[Array[Byte], Unit](i => step(partNumber, totalSize, chunk, uploadTickets)(i))
+      Cont[Array[Byte], Unit](i => step(partNumber, totalSize, accumulatedBytes, uploadTickets)(i))
     }
   }
 
-  def handleEOF(bucket: Bucket,
-                ticket: BucketFileUploadTicket,
+  def uploadPart(uploader: MultipartUploader,
+                 partNumber: PartNumber,
+                 totalSize: DataLength,
+                 accumulatedBytes: Array[Byte],
+                 uploadTickets: Future[List[BucketFilePartUploadTicket]])
+                (implicit ec: ExecutionContext): Future[List[BucketFilePartUploadTicket]] = {
+    val f = uploadTickets.flatMap { ts =>
+      Logger.info(s"Pushing part $partNumber with ${accumulatedBytes.length} bytes. $totalSize bytes uploaded so far")
+      uploader.uploadPart(BucketFilePart(partNumber.n, accumulatedBytes)).map(t => t +: ts)
+    }
+
+    f.onFailure {
+      case e =>
+        Logger.error("Error during upload of chunk, aborting multipart upload", e)
+        uploader.abortMultipartUpload
+    }
+    f
+  }
+
+  def handleEOF(uploader: MultipartUploader,
                 partNumber: PartNumber,
                 totalSize: DataLength,
                 accumulatedChunks: Array[Byte],
@@ -88,24 +115,24 @@ object S3UploadIteratee {
     Logger.info(s"Got EOF as part number $partNumber. Total data size is $finalLength")
     val f = uploadTickets.flatMap { ts =>
       Logger.info(s"Pushing final part $partNumber with ${accumulatedChunks.length} bytes")
-      val uploadTicket = bucket.uploadPart(ticket, BucketFilePart(partNumber.n, accumulatedChunks))
+      val uploadTicket = uploader.uploadPart(BucketFilePart(partNumber.n, accumulatedChunks))
 
       uploadTicket.onFailure {
         case e =>
           Logger.error("Error during upload of chunk, aborting multipart upload", e)
-          bucket.abortMultipartUpload(ticket)
+          uploader.abortMultipartUpload
       }
 
       uploadTicket.map { t =>
         Logger.info(s"Completing upload with $t and tickets for ${ts.size + 1} parts")
-        bucket.s3.completeMultipartUpload(bucket.name, ticket, (t +: ts).reverse).onComplete {
+        uploader.completeMultipartUpload((t +: ts).reverse).onComplete {
           case Success(response) => response.status match {
             case 200 => Logger.info(s"Multipart upload response was ${response.status}")
             case x => Logger.info(s"Response to multipart upload completion was $x (${response.body})")
           }
           case Failure(ex) =>
             Logger.info("Multipart upload failed", ex)
-            bucket.abortMultipartUpload(ticket)
+            uploader.abortMultipartUpload
         }
       }
     }
