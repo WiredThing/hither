@@ -52,6 +52,7 @@ object S3UploadIteratee {
 
   def apply(bucket: Bucket, ticket: BucketFileUploadTicket)(implicit ctx: ExecutionContext): StepFunction = {
     val uploader = new BucketUploader(bucket, ticket)
+    
     def step(partNumber: PartNumber, totalSize: DataLength, accumulatedBytes: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]])(i: Input[Array[Byte]]): Iteratee[Array[Byte], Unit] = i match {
       case Input.EOF => handleEOF(uploader, partNumber, totalSize, accumulatedBytes, uploadTickets)
       case Input.El(bytes) => handleEl(uploader, step, partNumber, totalSize, accumulatedBytes ++ bytes, uploadTickets)
@@ -109,13 +110,16 @@ object S3UploadIteratee {
   def handleEOF(uploader: MultipartUploader,
                 partNumber: PartNumber,
                 totalSize: DataLength,
-                accumulatedChunks: Array[Byte],
-                uploadTickets: Future[List[BucketFilePartUploadTicket]])(implicit ec: ExecutionContext): Iteratee[Array[Byte], Unit] = {
-    val finalLength: DataLength = totalSize.add(accumulatedChunks.length)
+                accumulatedBytes: Array[Byte],
+                uploadTickets: Future[List[BucketFilePartUploadTicket]])
+               (implicit ec: ExecutionContext): Iteratee[Array[Byte], Unit] = {
+    val finalLength: DataLength = totalSize.add(accumulatedBytes.length)
+
     Logger.info(s"Got EOF as part number $partNumber. Total data size is $finalLength")
+
     val f = uploadTickets.flatMap { ts =>
-      Logger.info(s"Pushing final part $partNumber with ${accumulatedChunks.length} bytes")
-      val uploadTicket = uploader.uploadPart(BucketFilePart(partNumber.n, accumulatedChunks))
+      Logger.info(s"Pushing final part $partNumber with ${accumulatedBytes.length} bytes")
+      val uploadTicket = uploader.uploadPart(BucketFilePart(partNumber.n, accumulatedBytes))
 
       uploadTicket.onFailure {
         case e =>
@@ -125,6 +129,7 @@ object S3UploadIteratee {
 
       uploadTicket.map { t =>
         Logger.info(s"Completing upload with $t and tickets for ${ts.size + 1} parts")
+
         uploader.completeMultipartUpload((t +: ts).reverse).onComplete {
           case Success(response) => response.status match {
             case 200 => Logger.info(s"Multipart upload response was ${response.status}")
@@ -140,6 +145,7 @@ object S3UploadIteratee {
     // Here we want to wait until the upload is completed so that the docker push does not exit
     // before the data is actually on the registry.
     Await.result(f, 10 minutes)
+
     Done(0, Input.EOF)
   }
 }
