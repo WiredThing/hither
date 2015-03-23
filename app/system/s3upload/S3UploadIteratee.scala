@@ -1,65 +1,18 @@
-package system.registry
+package system.s3upload
 
-import play.api.libs.ws.WSResponse
-
-import scala.language.postfixOps
-import scala.util.{Failure, Success}
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration._
+import fly.play.s3._
 import play.api.Logger
 import play.api.libs.iteratee._
-import fly.play.s3._
 
-trait MultipartUploader {
-  def uploadPart(part: BucketFilePart)(implicit ec: ExecutionContext): Future[BucketFilePartUploadTicket]
-
-  def abortMultipartUpload(implicit ec: ExecutionContext): Future[Unit]
-
-  def completeMultipartUpload(partUploadTickets: Seq[BucketFilePartUploadTicket])(implicit ec: ExecutionContext): Future[WSResponse]
-}
-
-case class BucketUploader(bucket: Bucket, ticket: BucketFileUploadTicket) extends MultipartUploader {
-  override def uploadPart(part: BucketFilePart)(implicit ec: ExecutionContext): Future[BucketFilePartUploadTicket] =
-    bucket.uploadPart(ticket, part)
-
-  override def completeMultipartUpload(partUploadTickets: Seq[BucketFilePartUploadTicket])(implicit ec: ExecutionContext): Future[WSResponse] =
-    bucket.s3.completeMultipartUpload(bucket.name, ticket, partUploadTickets)
-
-  override def abortMultipartUpload(implicit ec: ExecutionContext): Future[Unit] = bucket.abortMultipartUpload(ticket)
-}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 object S3UploadIteratee {
 
   type StepFunction = (PartState) => (Input[Array[Byte]]) => Iteratee[Array[Byte], Unit]
 
-  case class PartState(partNumber: PartNumber, totalSize: DataLength, accumulatedBytes: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]]) {
-    def addBytes(bytes: Array[Byte]): PartState = copy(accumulatedBytes = accumulatedBytes ++ bytes)
-
-    def nextPart(tickets: Future[List[BucketFilePartUploadTicket]]): PartState = copy(partNumber = partNumber.inc, totalSize = totalSize.add(accumulatedBytes.length), Array(), uploadTickets = tickets)
-  }
-
-  object PartState {
-
-    implicit val ec = scala.concurrent.ExecutionContext.global
-
-    val start: PartState = PartState(PartNumber.one, DataLength.zero, Array(), Future(List()))
-  }
-
-  case class PartNumber(n: Int) extends AnyVal {
-    def inc: PartNumber = PartNumber(n + 1)
-  }
-
-  object PartNumber {
-    val one = PartNumber(1)
-  }
-
-  case class DataLength(l: Int) extends AnyVal {
-    def add(a: Int) = DataLength(l + a)
-  }
-
-  object DataLength {
-    val zero = DataLength(0)
-  }
 
   val FIVE_MEG: Int = 5 * 1024 * 1024
 
@@ -131,12 +84,12 @@ object S3UploadIteratee {
         Logger.info(s"Completing upload with $t and tickets for ${ts.size + 1} parts")
 
         uploader.completeMultipartUpload((t +: ts).reverse).onComplete {
-          case Success(response) => response.status match {
-            case 200 => Logger.info(s"Multipart upload response was ${response.status}")
-            case x => Logger.info(s"Response to multipart upload completion was $x (${response.body})")
-          }
+          case Success(MultipartUploadSuccess) => Logger.info(s"Multipart upload response completed successfully")
+          case Success(MultipartUploadError(status, error)) =>
+            Logger.info(s"Response to multipart upload completion was $status ($error). Aborting.")
+            uploader.abortMultipartUpload
           case Failure(ex) =>
-            Logger.info("Multipart upload failed", ex)
+            Logger.info("Multipart upload failed. Aborting.", ex)
             uploader.abortMultipartUpload
         }
       }

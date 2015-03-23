@@ -8,7 +8,7 @@ import play.api.libs.ws.WSResponseHeaders
 import services.ContentEnumerator
 import system.Configuration
 import system.registry.ResourceType.LayerType
-import system.registry.S3UploadIteratee.{PartState, DataLength, PartNumber}
+import system.s3upload.{PartState, S3UploadIteratee}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
