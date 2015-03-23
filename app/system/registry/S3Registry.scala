@@ -8,7 +8,7 @@ import play.api.libs.ws.WSResponseHeaders
 import services.ContentEnumerator
 import system.Configuration
 import system.registry.ResourceType.LayerType
-import system.registry.S3UploadIteratee.{DataLength, PartNumber}
+import system.registry.S3UploadIteratee.{PartState, DataLength, PartNumber}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -93,7 +93,7 @@ trait S3Registry extends PrivateRegistry {
       logger.debug(s"Multipart upload to ${bucketFile.name} started with ticket $ticket")
 
       val step = S3UploadIteratee(bucket, ticket)
-      Cont[Array[Byte], Unit](i => step(PartNumber.one, DataLength.zero, Array(), Future(List()))(i))
+      Cont[Array[Byte], Unit](i => step(PartState.start)(i))
     }.recover {
       case t => logger.error("Got error trying to initiate upload", t); throw t
     }

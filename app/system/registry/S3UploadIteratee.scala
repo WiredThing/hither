@@ -30,7 +30,20 @@ case class BucketUploader(bucket: Bucket, ticket: BucketFileUploadTicket) extend
 
 object S3UploadIteratee {
 
-  type StepFunction = (PartNumber, DataLength, Array[Byte], Future[List[BucketFilePartUploadTicket]]) => (Input[Array[Byte]]) => Iteratee[Array[Byte], Unit]
+  type StepFunction = (PartState) => (Input[Array[Byte]]) => Iteratee[Array[Byte], Unit]
+
+  case class PartState(partNumber: PartNumber, totalSize: DataLength, accumulatedBytes: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]]) {
+    def addBytes(bytes: Array[Byte]): PartState = copy(accumulatedBytes = accumulatedBytes ++ bytes)
+
+    def nextPart(tickets: Future[List[BucketFilePartUploadTicket]]): PartState = copy(partNumber = partNumber.inc, totalSize = totalSize.add(accumulatedBytes.length), Array(), uploadTickets = tickets)
+  }
+
+  object PartState {
+
+    implicit val ec = scala.concurrent.ExecutionContext.global
+
+    val start: PartState = PartState(PartNumber.one, DataLength.zero, Array(), Future(List()))
+  }
 
   case class PartNumber(n: Int) extends AnyVal {
     def inc: PartNumber = PartNumber(n + 1)
@@ -52,27 +65,22 @@ object S3UploadIteratee {
 
   def apply(bucket: Bucket, ticket: BucketFileUploadTicket)(implicit ctx: ExecutionContext): StepFunction = {
     val uploader = new BucketUploader(bucket, ticket)
-    
-    def step(partNumber: PartNumber, totalSize: DataLength, accumulatedBytes: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]])(i: Input[Array[Byte]]): Iteratee[Array[Byte], Unit] = i match {
-      case Input.EOF => handleEOF(uploader, partNumber, totalSize, accumulatedBytes, uploadTickets)
-      case Input.El(bytes) => handleEl(uploader, step, partNumber, totalSize, accumulatedBytes ++ bytes, uploadTickets)
-      case Input.Empty => Cont[Array[Byte], Unit](i => step(partNumber, totalSize, accumulatedBytes, uploadTickets)(i))
+
+    def step(state: PartState)(i: Input[Array[Byte]]): Iteratee[Array[Byte], Unit] = i match {
+      case Input.EOF => handleEOF(uploader, state)
+      case Input.El(bytes) => handleEl(uploader, step, state.addBytes(bytes))
+      case Input.Empty => Cont[Array[Byte], Unit](i => step(state)(i))
     }
 
     step
   }
 
-  def handleEl(uploader: MultipartUploader,
-               step: StepFunction,
-               partNumber: PartNumber,
-               totalSize: DataLength,
-               accumulatedBytes: Array[Byte],
-               uploadTickets: Future[List[BucketFilePartUploadTicket]])
+  def handleEl(uploader: MultipartUploader, step: StepFunction, state: PartState)
               (implicit ec: ExecutionContext): Iteratee[Array[Byte], Unit] = {
-    Logger.info(s"Got Input for part $partNumber with ${accumulatedBytes.length} bytes of data. Total so far is ${totalSize.add(accumulatedBytes.length)}")
+    Logger.info(s"Got Input for part ${state.partNumber} with ${state.accumulatedBytes.length} bytes of data. Total so far is ${state.totalSize.add(state.accumulatedBytes.length)}")
 
-    if (accumulatedBytes.length >= FIVE_MEG) {
-      val f: Future[List[BucketFilePartUploadTicket]] = uploadPart(uploader, partNumber, totalSize, accumulatedBytes, uploadTickets)
+    if (state.accumulatedBytes.length >= FIVE_MEG) {
+      val f: Future[List[BucketFilePartUploadTicket]] = uploadPart(uploader, state)
 
       // Controversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
       // then the iteratee will happily consume all the incoming data and buffer it up in memory,
@@ -82,21 +90,17 @@ object S3UploadIteratee {
       // context, perhaps?
       Await.result(f, 10 minutes)
 
-      Cont[Array[Byte], Unit](i => step(partNumber.inc, totalSize.add(accumulatedBytes.length), Array(), f)(i))
+      Cont[Array[Byte], Unit](i => step(state.nextPart(f))(i))
     } else {
-      Cont[Array[Byte], Unit](i => step(partNumber, totalSize, accumulatedBytes, uploadTickets)(i))
+      Cont[Array[Byte], Unit](i => step(state)(i))
     }
   }
 
-  def uploadPart(uploader: MultipartUploader,
-                 partNumber: PartNumber,
-                 totalSize: DataLength,
-                 accumulatedBytes: Array[Byte],
-                 uploadTickets: Future[List[BucketFilePartUploadTicket]])
+  def uploadPart(uploader: MultipartUploader, state: PartState)
                 (implicit ec: ExecutionContext): Future[List[BucketFilePartUploadTicket]] = {
-    val f = uploadTickets.flatMap { ts =>
-      Logger.info(s"Pushing part $partNumber with ${accumulatedBytes.length} bytes. $totalSize bytes uploaded so far")
-      uploader.uploadPart(BucketFilePart(partNumber.n, accumulatedBytes)).map(t => t +: ts)
+    val f = state.uploadTickets.flatMap { ts =>
+      Logger.info(s"Pushing part ${state.partNumber} with ${state.accumulatedBytes.length} bytes. ${state.totalSize} bytes uploaded so far")
+      uploader.uploadPart(BucketFilePart(state.partNumber.n, state.accumulatedBytes)).map(t => t +: ts)
     }
 
     f.onFailure {
@@ -107,19 +111,15 @@ object S3UploadIteratee {
     f
   }
 
-  def handleEOF(uploader: MultipartUploader,
-                partNumber: PartNumber,
-                totalSize: DataLength,
-                accumulatedBytes: Array[Byte],
-                uploadTickets: Future[List[BucketFilePartUploadTicket]])
+  def handleEOF(uploader: MultipartUploader, state: PartState)
                (implicit ec: ExecutionContext): Iteratee[Array[Byte], Unit] = {
-    val finalLength: DataLength = totalSize.add(accumulatedBytes.length)
+    val finalLength: DataLength = state.totalSize.add(state.accumulatedBytes.length)
 
-    Logger.info(s"Got EOF as part number $partNumber. Total data size is $finalLength")
+    Logger.info(s"Got EOF as part number ${state.partNumber}. Total data size is $finalLength")
 
-    val f = uploadTickets.flatMap { ts =>
-      Logger.info(s"Pushing final part $partNumber with ${accumulatedBytes.length} bytes")
-      val uploadTicket = uploader.uploadPart(BucketFilePart(partNumber.n, accumulatedBytes))
+    val f = state.uploadTickets.flatMap { ts =>
+      Logger.info(s"Pushing final part ${state.partNumber} with ${state.accumulatedBytes.length} bytes")
+      val uploadTicket = uploader.uploadPart(BucketFilePart(state.partNumber.n, state.accumulatedBytes))
 
       uploadTicket.onFailure {
         case e =>
