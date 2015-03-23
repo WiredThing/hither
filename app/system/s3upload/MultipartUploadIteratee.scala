@@ -25,15 +25,13 @@ class MultipartUploadIteratee(uploader: MultipartUploader, uploadThreshold: Int)
     val newState = state.addBytes(bytes)
 
     if (newState.accumulatedBytes.length >= uploadThreshold) {
-      val f = uploadPart(newState)
-
       // Controversial. Blocks the iteratee until the chunk has been uploaded. If we don't do this
       // then the iteratee will happily consume all the incoming data and buffer it up in memory,
       // only discarding chunks when they've finished uploading. This could potentially lead
       // to out-of-memory errors. Blocking creates back-pressure to slow the data coming in, at
       // the cost of thread starvation if several uploads happen concurrently. Use a different thread
       // context, perhaps?
-      val tickets = Await.result(f, 10 minutes)
+      val tickets = Await.result(uploadPart(newState), 10 minutes)
       Cont[Array[Byte], Unit](i => step(newState.nextPart(tickets))(i))
     } else {
       Cont[Array[Byte], Unit](i => step(newState)(i))
@@ -70,7 +68,9 @@ class MultipartUploadIteratee(uploader: MultipartUploader, uploadThreshold: Int)
     finalState.onSuccess { case _ =>
       Logger.info(s"Completing upload with tickets for ${state.uploadTickets.size} parts")
 
-      uploader.completeMultipartUpload(state.uploadTickets.reverse).onComplete {
+      val f = uploader.completeMultipartUpload(state.uploadTickets.reverse)
+
+      f.onComplete {
         case Success(MultipartUploadSuccess) => Logger.info(s"Multipart upload response completed successfully")
         case Success(MultipartUploadError(status, error)) =>
           Logger.info(s"Response to multipart upload completion was $status ($error). Aborting.")
@@ -79,6 +79,8 @@ class MultipartUploadIteratee(uploader: MultipartUploader, uploadThreshold: Int)
           Logger.info("Multipart upload failed. Aborting.", ex)
           uploader.abortMultipartUpload
       }
+
+      Await.result(f, 1 minutes)
     }
 
     // Here we want to wait until the upload is completed so that the docker push does not exit

@@ -40,22 +40,34 @@ class MultipartUploadIterateeTest extends FlatSpec with Matchers {
     Await.result(result.feed(Input.EOF), 10 seconds)
   }
 
-  "handleEl" should "upload the bytes the total size reaches the upload threshold" in {
+  it should "upload the bytes the total size reaches the upload threshold" in {
     val mockUploader: MockUploader = new MockUploader
     val sut = new MultipartUploadIteratee(mockUploader, 3)
-    val startingState = PartState.start
     val testBytes = "foo".getBytes
-    val expectedState = startingState.addBytes(testBytes).nextPart(List(BucketFilePartUploadTicket(1, "")))
+    val expectedState = PartState.start.addBytes(testBytes).nextPart(List(BucketFilePartUploadTicket(1, "")))
 
     def mockStep(state: PartState)(input: Input[Array[Byte]]): IterateeType = {
       state shouldBe expectedState
       Cont[Array[Byte], Unit](i => ???)
     }
 
-    val result = sut.handleEl(mockStep, startingState, testBytes)
+    val result = sut.handleEl(mockStep, PartState.start, testBytes)
     result shouldBe a[Step.Cont[_, _]]
     mockUploader.uploadCount shouldBe 1
     Await.result(result.feed(Input.EOF), 10 seconds)
+  }
+
+  "handleEOF" should "upload the final part, complete the upload and return a Done" in {
+    val mockUploader: MockUploader = new MockUploader
+    val sut = new MultipartUploadIteratee(mockUploader, 10)
+    val testBytes = "foo".getBytes
+    val state = PartState.start.addBytes(testBytes)
+
+    val result = sut.handleEOF(state)
+    result shouldBe a[Step.Done[_, _]]
+
+    mockUploader.uploadCount shouldBe 1
+    mockUploader.completeCount shouldBe 1
   }
 }
 
