@@ -57,30 +57,22 @@ class MultipartUploadIteratee(uploader: MultipartUploader, uploadThreshold: Int)
     Logger.info(s"Got EOF as part number ${state.partNumber}. Total data size is $finalLength")
 
     Logger.info(s"Pushing final part ${state.partNumber} with ${state.accumulatedBytes.length} bytes")
-    val finalState: Future[IterateeType] = uploadPart(state).map(_ => Done(0, Input.EOF))
+    val finalState: Future[IterateeType] = uploadPart(state).flatMap { _ =>
+      Logger.info(s"Completing upload with tickets for ${state.uploadTickets.size} parts")
+
+      uploader.completeMultipartUpload(state.uploadTickets.reverse).map {
+        case MultipartUploadSuccess => Logger.info(s"Multipart upload response completed successfully")
+        case MultipartUploadError(status, error) =>
+          Logger.info(s"Response to multipart upload completion was $status ($error). Aborting.")
+          uploader.abortMultipartUpload
+      }
+
+    }.map(_ => Done(0, Input.EOF))
 
     finalState.onFailure {
       case e =>
         Logger.error("Error during upload of chunk, aborting multipart upload", e)
         uploader.abortMultipartUpload
-    }
-
-    finalState.onSuccess { case _ =>
-      Logger.info(s"Completing upload with tickets for ${state.uploadTickets.size} parts")
-
-      val f = uploader.completeMultipartUpload(state.uploadTickets.reverse)
-
-      f.onComplete {
-        case Success(MultipartUploadSuccess) => Logger.info(s"Multipart upload response completed successfully")
-        case Success(MultipartUploadError(status, error)) =>
-          Logger.info(s"Response to multipart upload completion was $status ($error). Aborting.")
-          uploader.abortMultipartUpload
-        case Failure(ex) =>
-          Logger.info("Multipart upload failed. Aborting.", ex)
-          uploader.abortMultipartUpload
-      }
-
-      Await.result(f, 1 minutes)
     }
 
     // Here we want to wait until the upload is completed so that the docker push does not exit
