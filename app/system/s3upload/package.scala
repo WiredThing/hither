@@ -2,20 +2,19 @@ package system
 
 import fly.play.s3.BucketFilePartUploadTicket
 
+import scala.collection.mutable.ArraySeq
 import scala.concurrent.Future
 
 package object s3upload {
-  case class PartState(partNumber: PartNumber, totalSize: DataLength, accumulatedBytes: Array[Byte], uploadTickets: Future[List[BucketFilePartUploadTicket]]) {
+
+  case class PartState(partNumber: PartNumber, totalSize: DataLength, accumulatedBytes: ArraySeq[Byte], uploadTickets: List[BucketFilePartUploadTicket]) {
     def addBytes(bytes: Array[Byte]): PartState = copy(accumulatedBytes = accumulatedBytes ++ bytes)
 
-    def nextPart(tickets: Future[List[BucketFilePartUploadTicket]]): PartState = copy(partNumber = partNumber.inc, totalSize = totalSize.add(accumulatedBytes.length), Array(), uploadTickets = tickets)
+    def nextPart(tickets: List[BucketFilePartUploadTicket]): PartState = copy(partNumber = partNumber.inc, totalSize = totalSize.add(accumulatedBytes.length), ArraySeq(), uploadTickets = tickets)
   }
 
   object PartState {
-
-    implicit val ec = scala.concurrent.ExecutionContext.global
-
-    val start: PartState = PartState(PartNumber.one, DataLength.zero, Array(), Future(List()))
+    val start: PartState = PartState(PartNumber.one, DataLength.zero, ArraySeq(), List())
   }
 
   case class PartNumber(n: Int) extends AnyVal {
@@ -33,4 +32,5 @@ package object s3upload {
   object DataLength {
     val zero = DataLength(0)
   }
+
 }
