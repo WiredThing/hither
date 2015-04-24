@@ -96,12 +96,12 @@ object S3Controller extends Controller with ContentFeeding {
     }
   }
 
-  private def trimQuotes(s: String): String = {
-    if (s.startsWith("\"")) trimQuotes(s.substring(1))
-    else if (s.startsWith("'")) trimQuotes(s.substring(1))
-    else if (s.endsWith("\"")) trimQuotes(s.substring(0, s.length - 1))
-    else if (s.endsWith("'")) trimQuotes(s.substring(0, s.length - 1))
-    else s
+   def trimQuotes(s: String): String = s match {
+    case _ if s.startsWith("\"") => trimQuotes(s.substring(1))
+    case _ if s.startsWith("'") => trimQuotes(s.substring(1))
+    case _ if s.endsWith("\"") => trimQuotes(s.substring(0, s.length - 1))
+    case _ if s.endsWith("'") => trimQuotes(s.substring(0, s.length - 1))
+    case _ => s
   }
 
   private def ancestryFor(imageId: ImageId): Future[Set[ImageId]] = {

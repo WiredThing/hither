@@ -8,6 +8,7 @@ import play.api.libs.ws.WSResponseHeaders
 import services.ContentEnumerator
 import system.Configuration
 import system.registry.ResourceType.LayerType
+import system.s3upload.{PartState, S3UploadIteratee}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -50,7 +51,7 @@ trait S3Registry extends PrivateRegistry {
   override def resourceExists(imageId: ImageId, resourceType: ResourceType)(implicit ctx: ExecutionContext): Future[Boolean] = {
     logger.debug(s"Checking if ${resourceType.name} exists for image ${imageId.id}")
     bucket.list(s"${Configuration.s3.registryRoot}/${imageId.id}/").map { entries =>
-      logger.debug(entries.toString)
+      logger.debug(entries.toString())
       entries.toList.exists(_.name == pathName(imageId, resourceType))
     }
   }
@@ -89,10 +90,10 @@ trait S3Registry extends PrivateRegistry {
     val bucketFile = BucketFile(fileName, resourceType.contentType)
 
     bucket.initiateMultipartUpload(bucketFile).map { ticket =>
-      logger.debug(s"Multipart upload to ${bucketFile.name} started with ticket ${ticket}")
+      logger.debug(s"Multipart upload to ${bucketFile.name} started with ticket $ticket")
 
       val step = S3UploadIteratee(bucket, ticket)
-      Cont[Array[Byte], Unit](i => step(1, 0, Array(), Future(List()))(i))
+      Cont[Array[Byte], Unit](i => step(PartState.start)(i))
     }.recover {
       case t => logger.error("Got error trying to initiate upload", t); throw t
     }

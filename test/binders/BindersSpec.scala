@@ -6,8 +6,6 @@ import models.{Namespace, RepositoryName, Repository}
 
 class BindersSpec extends FlatSpec with Matchers {
 
-  import binders._
-
   "repoBinder" should "bind 'foo' to a Repository with no namespace" in {
     repoBinder.bind("", "foo") shouldBe Right(Repository(RepositoryName("foo")))
   }

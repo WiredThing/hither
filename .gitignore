@@ -17,3 +17,5 @@ localRegistry
 Dockerfile
 *~
 atlassian-ide-plugin.xml
+.sbtserver
+.sbtserver.lock

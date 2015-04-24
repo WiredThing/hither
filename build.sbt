@@ -12,14 +12,22 @@ routesImport += "binders._,  models._"
 
 scalaVersion := "2.11.6"
 
-scalacOptions ++= Seq("-feature")
+scalacOptions ++= Seq("-deprecation", "-feature", "-language:reflectiveCalls", "-language:postfixOps")
 
 resolvers ++= Seq(
   "WiredThing Internal Forks Repository" at "https://wiredthing.artifactoryonline.com/wiredthing/libs-forked-local",
   "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local"
 )
 
-//credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+lazy val internalForks = "WiredThing Internal Forks Repository" at "https://wiredthing.artifactoryonline.com/wiredthing/libs-forked-local"
+
+lazy val wiredthingReleases = "WiredThing Internal Libraries Repository" at "https://wiredthing.artifactoryonline.com/wiredthing/libs-releases-local"
+
+lazy val wiredthingSnapshots = "WiredThing Internal Snapshots Repository" at "https://wiredthing.artifactoryonline.com/wiredthing/libs-snapshots-local"
+
+credentials in ThisBuild += Credentials(Path.userHome / ".ivy2" / ".credentials")
+
+resolvers in ThisBuild ++= Seq(wiredthingSnapshots, wiredthingReleases, internalForks)
 
 libraryDependencies ++= Seq(
   ws withSources(),

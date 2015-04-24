@@ -21,8 +21,8 @@ object Configuration {
   }
 
   object aws {
-    lazy val accessKeyId = Play.configuration.getString("aws.accessKeyId").get
-    lazy val secretKey = Play.configuration.getString("aws.secretKey").get
+    lazy val accessKeyId = Play.configuration.getString("aws.accessKeyId")
+    lazy val secretKey = Play.configuration.getString("aws.secretKey")
 
     lazy val proxy: Option[WSProxyServer] = Play.configuration.getString("aws.proxyHost").map { hostName =>
       val port = Play.configuration.getInt("aws.proxyPort").getOrElse(80)
@@ -35,8 +35,8 @@ object Configuration {
 
     lazy val registryRoot = Play.configuration.getString("s3.registry.root").getOrElse("registry")
 
-    lazy val bucketName = Play.configuration.getString("s3.bucketName").get
-    lazy val region = Play.configuration.getString("s3.region").get
+    lazy val bucketName = Play.configuration.getString("s3.bucketName").getOrElse(throw new Exception("s3.bucketName property is not set"))
+    lazy val region = Play.configuration.getString("s3.region")
     lazy val useHttps: Boolean = Play.configuration.getBoolean("s3.https").getOrElse(false)
   }
 
